@@ -1,7 +1,8 @@
 import pathlib
-import docker
+import docker  # type: ignore
 import atexit
 import signal
+from typing import Optional, Any
 
 _container = None
 _client = None
@@ -12,16 +13,18 @@ ROOT_PATH = DIR_PATH.parent.parent.resolve()
 WORKSPACE_DIR = ROOT_PATH / "workdir"
 DOCKER_WORKSPACE_DIR = "/workdir"
 
-def cleanup_container(signum=None, frame=None):
+
+def cleanup_container(signum: Optional[Any] = None, frame: Optional[Any] = None) -> None:
     global _container
     if _container:
         try:
             _container.remove(force=True)
             _container = None
-        except:
+        except Exception:
             pass
     if signum == signal.SIGINT:
         raise KeyboardInterrupt()
+
 
 atexit.register(cleanup_container)
 signal.signal(signal.SIGINT, cleanup_container)
@@ -59,19 +62,12 @@ def bash(command: str) -> str:
                 name="bash_runner",
                 tty=True,
                 stdin_open=True,
-                volumes={
-                    WORKSPACE_DIR: {
-                        "bind": DOCKER_WORKSPACE_DIR,
-                        "mode": "rw"
-                    }
-                },
-                working_dir=DOCKER_WORKSPACE_DIR
+                volumes={WORKSPACE_DIR: {"bind": DOCKER_WORKSPACE_DIR, "mode": "rw"}},
+                working_dir=DOCKER_WORKSPACE_DIR,
             )
 
     result = _container.exec_run(
-        ["bash", "-c", command],
-        workdir=DOCKER_WORKSPACE_DIR,
-        stdout=True,
-        stderr=True
+        ["bash", "-c", command], workdir=DOCKER_WORKSPACE_DIR, stdout=True, stderr=True
     )
-    return result.output.decode("utf-8").strip()
+    output: str = result.output.decode("utf-8").strip()
+    return output

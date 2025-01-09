@@ -35,7 +35,9 @@ def _format_entries(entries: List[Dict[str, Any]], start_index: int) -> str:
         entry["id"] = entry["id"].split("/")[-1]
         entry = {k: entry[k] for k in KEYS}
         entry_dump: str = yaml.dump(entry, sort_keys=False, width=10000)
-        final_entries.append(f"==== Entry {start_index + entry_num} ====\n" + entry_dump)
+        final_entries.append(
+            f"==== Entry {start_index + entry_num} ====\n" + entry_dump
+        )
     return "\n".join(final_entries)
 
 

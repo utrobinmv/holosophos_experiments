@@ -1,0 +1,6 @@
+xmltodict >= 0.14.2
+types-xmltodict >= 0.14.0
+pyyaml >= 5.3.1
+types-pyyaml >= 6.0.12
+smolagents == 1.1.0
+marker-pdf >= 1.2.3
