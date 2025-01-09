@@ -13,5 +13,6 @@ duckduckgo-search >= 6.3.7
 python-dotenv >= 1.0.1
 e2b-code-interpreter >= 1.0.3
 openai >= 1.58.1
-smolagents == 1.1.0 --no-deps
+smolagents == 1.1.0
+pillow == 11.0.0
 marker-pdf >= 1.2.3
