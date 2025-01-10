@@ -1,6 +1,6 @@
 from smolagents import CodeAgent  # type: ignore
 from smolagents.models import LiteLLMModel  # type: ignore
-from smolagents.default_tools import DuckDuckGoSearchTool, VisitWebpageTool
+from smolagents.default_tools import DuckDuckGoSearchTool, VisitWebpageTool  # type: ignore
 
 from holosophos.tools import (
     convert_tool_to_smolagents,
