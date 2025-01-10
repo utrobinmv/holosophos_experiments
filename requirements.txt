@@ -5,4 +5,5 @@ types-xmltodict >= 0.14.0
 pyyaml >= 5.3.1
 types-pyyaml >= 5.3.1
 smolagents == 1.1.0
+docker >= 7.1.0
 pdfminer.six >= 20231228
