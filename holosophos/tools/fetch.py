@@ -1,6 +1,6 @@
 from typing import Optional
 
-from trafilatura import fetch_url, extract  # type: ignore
+from trafilatura import fetch_url, extract
 
 
 def fetch(url: str, max_chars_count: Optional[int] = 5000) -> str:
