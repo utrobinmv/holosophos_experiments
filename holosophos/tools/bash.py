@@ -14,7 +14,9 @@ WORKSPACE_DIR = ROOT_PATH / "workdir"
 DOCKER_WORKSPACE_DIR = "/workdir"
 
 
-def cleanup_container(signum: Optional[Any] = None, frame: Optional[Any] = None) -> None:
+def cleanup_container(
+    signum: Optional[Any] = None, frame: Optional[Any] = None
+) -> None:
     global _container
     if _container:
         try:
