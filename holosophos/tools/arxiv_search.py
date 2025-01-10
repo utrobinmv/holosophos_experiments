@@ -1,20 +1,28 @@
 # Based on https://github.com/jonatasgrosman/findpapers/blob/master/findpapers/searchers/arxiv_searcher.py
 # https://info.arxiv.org/help/api/user-manual.html
 
-import yaml
 from typing import Optional, Literal, List, Dict, Any, Union
-from datetime import datetime
+from datetime import datetime, date
+from urllib3.util.retry import Retry  # type: ignore
 
 import requests
+from requests.adapters import HTTPAdapter
 import xmltodict
 from jinja2 import Template
-
 
 BASE_URL = "http://export.arxiv.org"
 URL_TEMPLATE = "{base_url}/api/query?search_query={query}&start={start}&sortBy={sort_by}&sortOrder={sort_order}&max_results={limit}"
 SORT_BY_OPTIONS = ("relevance", "lastUpdatedDate", "submittedDate")
 SORT_ORDER_OPTIONS = ("ascending", "descending")
-KEYS = ("id", "updated", "published", "title", "summary", "author")
+ENTRY_TEMPLATE = """==== Entry {{index}} ====
+Paper ID: {{entry["id"]}}
+Title: {{entry["title"]}}
+Authors: {{entry["authors"]}}
+Summary: {{entry["summary"]}}{% if entry["comment"] %}
+Comment: {{entry["comment"]}}{% endif %}
+Publication date: {{entry["published"]}}{% if entry["published"] != entry["updated"] %}
+Date of last update: {{entry["updated"]}}{% endif %}
+Categories: {{entry["categories"]}}"""
 
 
 def _format_id(url: str) -> str:
@@ -22,7 +30,7 @@ def _format_id(url: str) -> str:
 
 
 def _format_text_field(text: str) -> str:
-    text = " ".join([l.strip() for l in text.split() if l.strip()])
+    text = " ".join([line.strip() for line in text.split() if line.strip()])
     return text
 
 
@@ -66,23 +74,36 @@ def _clean_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-ENTRY_TEMPLATE = """==== Entry {{index}} ====
-Paper ID: {{entry["id"]}}
-Title: {{entry["title"]}}
-Authors: {{entry["authors"]}}
-Summary: {{entry["summary"]}}{% if entry["comment"] %}
-Comment: {{entry["comment"]}}{% endif %}
-Publication date: {{entry["published"]}}{% if entry["published"] != entry["updated"] %}
-Date of last update: {{entry["updated"]}}{% endif %}
-Categories: {{entry["categories"]}}"""
+def _convert_to_yyyymmddtttt(date_str: str) -> str:
+    try:
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+        return date_obj.strftime("%Y%m%d") + "0000"
+    except ValueError as e:
+        raise ValueError("Invalid date format. Please use YYYY-MM-DD format.") from e
 
 
-def _fix_query(query: str) -> str:
-    transformed_query: str = query.replace(" AND NOT ", " ANDNOT ")
-    transformed_query = transformed_query.replace("-", " ")
-    if transformed_query[0] == '"':
-        transformed_query = " " + transformed_query
-    return transformed_query
+def _compose_query(
+    orig_query: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> str:
+    query: str = orig_query.replace(" AND NOT ", " ANDNOT ")
+
+    if start_date or end_date:
+        if not start_date:
+            start_date = "1900-01-01"
+        if not end_date:
+            today = date.today()
+            end_date = today.strftime("%Y-%m-%d")
+        date_filter = f"[{_convert_to_yyyymmddtttt(start_date)} TO {_convert_to_yyyymmddtttt(end_date)}]"
+        query = f"({query}) AND submittedDate:{date_filter}"
+
+    query = query.replace("-", " ")
+    query = query.replace(" ", "+")
+    query = query.replace('"', "%22")
+    query = query.replace("(", "%28")
+    query = query.replace(")", "%29")
+    return query
 
 
 def _format_entries(entries: List[Dict[str, Any]], start_index: int) -> str:
@@ -100,40 +121,70 @@ def _format_entries(entries: List[Dict[str, Any]], start_index: int) -> str:
     return "\n".join(final_entries)
 
 
+def _get_results(url: str) -> requests.Response:
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[500, 502, 503, 504],
+        allowed_methods=["GET"],
+    )
+
+    session = requests.Session()
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+
+    try:
+        response = session.get(url, timeout=30)
+        return response
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
+    ) as e:
+        print(f"Failed after {retry_strategy.total} retries: {str(e)}")
+        raise
+
+    return response
+
+
 def arxiv_search(
     query: str,
     offset: Optional[int] = 0,
-    limit: Optional[int] = 5,
+    limit: Optional[int] = 3,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     sort_by: Optional[str] = "relevance",
     sort_order: Optional[str] = "descending",
 ) -> str:
     """
-    A tool that searches papers in Arxiv.
-    It returns text representation that includes meta-information about the papers with theirs summaries.
-    To search one of the entry fields prepend the field prefix followed by a colon to the search term.
+    Search arXiv papers with field-specific queries.
 
-    The following prefixes can be searched:
-    - ti / Title
-    - au / Author
-    - abs / Abstract
-    - cat / Subject Category
-    - id / Id
-    - submittedDate / Date, expected format: [YYYYMMDDTTTT+TO+YYYYMMDDTTTT]
+    Fields that can be searched:
+        ti: (title), au: (author), abs: (abstract),
+        cat: (category), id: (ID)
 
-    The API allows advanced query construction with Boolean operators.
-    The following operators can be used: AND, OR, ANDNOT
+    Operatore that can be used:
+        AND, OR, ANDNOT
 
-    Query to find articles by the author Adrian Del Maestro: au:del_maestro
-    Query with dates: au:del_maestro&submittedDate:[202301010600+TO+202401010600]
-    Query to find articles by the author Adrian DelMaestro with word "checkerboard" in the title:
-    au:del_maestro+AND+ti:checkerboard
+    You can include entire phrases by enclosing the phrase in double quotes.
+
+    Example queries:
+        abs:"machine learning"
+        au:"del maestro"
+        au:vaswani AND ti:"attention is all"
+        (au:vaswani OR au:"del maestro") ANDNOT ti:attention
 
     Args:
         query: The search query, required.
-        offset: The offset in search results. For instance, if it is 10, first 10 items will be skipped.
-        limit: The maximum number of items that will be returned.
-        sort_by: 3 possible options to sort by: relevance, lastUpdatedDate, submittedDate
-        sort_order: 2 possible sort orders: ascending, descending
+        offset: The offset in search results. If it is 10, first 10 items will be skipped. 0 by default.
+        limit: The maximum number of items that will be returned. 3 by default.
+        start_date: Start date in %Y-%m-%d format. None by default.
+        end_date: End date in %Y-%m-%d format. None by default.
+        sort_by: 3 options to sort by: relevance, lastUpdatedDate, submittedDate. relevance by default.
+        sort_order: 2 sort orders: ascending, descending. descending by default.
+
+    Returns:
+        A text containing papers' metadata including "Paper ID", "Title", "Authors",
+        "Summary", "Comment", "Publication date", "Date of last update", "Categories"
     """
 
     assert isinstance(query, str), "Error: Your search query must be a string"
@@ -152,15 +203,17 @@ def arxiv_search(
     assert limit < 100, "Error: limit is too large, it should be less than 100"
     assert limit > 0, "Error: limit should be greater than 0"
 
+    fixed_query: str = _compose_query(query, start_date, end_date)
     url = URL_TEMPLATE.format(
         base_url=BASE_URL,
-        query=_fix_query(query),
+        query=fixed_query,
         start=offset,
         limit=limit,
         sort_by=sort_by,
         sort_order=sort_order,
     )
-    response = requests.get(url)
+
+    response = _get_results(url)
     content = response.content
     parsed_content = xmltodict.parse(content)
 
