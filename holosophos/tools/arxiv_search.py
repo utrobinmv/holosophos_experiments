@@ -1,9 +1,10 @@
-# Based on https://github.com/jonatasgrosman/findpapers/blob/master/findpapers/searchers/arxiv_searcher.py
+# Based on
+# https://github.com/jonatasgrosman/findpapers/blob/master/findpapers/searchers/arxiv_searcher.py
 # https://info.arxiv.org/help/api/user-manual.html
 
 from typing import Optional, Literal, List, Dict, Any, Union
 from datetime import datetime, date
-from urllib3.util.retry import Retry  # type: ignore
+from urllib3.util.retry import Retry
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -173,6 +174,11 @@ def arxiv_search(
         au:vaswani AND ti:"attention is all"
         (au:vaswani OR au:"del maestro") ANDNOT ti:attention
 
+    Note, that boolean operators are strict. Do not overuse AND.
+
+    Returns a text containing papers' metadata including "Paper ID", "Title", "Authors",
+    "Summary", "Comment", "Publication date", "Date of last update", "Categories"
+
     Args:
         query: The search query, required.
         offset: The offset in search results. If it is 10, first 10 items will be skipped. 0 by default.
@@ -181,10 +187,6 @@ def arxiv_search(
         end_date: End date in %Y-%m-%d format. None by default.
         sort_by: 3 options to sort by: relevance, lastUpdatedDate, submittedDate. relevance by default.
         sort_order: 2 sort orders: ascending, descending. descending by default.
-
-    Returns:
-        A text containing papers' metadata including "Paper ID", "Title", "Authors",
-        "Summary", "Comment", "Publication date", "Date of last update", "Categories"
     """
 
     assert isinstance(query, str), "Error: Your search query must be a string"

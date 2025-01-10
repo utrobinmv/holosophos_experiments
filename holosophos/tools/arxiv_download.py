@@ -1,41 +1,39 @@
+# Based on
+# https://github.com/SamuelSchmidgall/AgentLaboratory/blob/main/tools.py
+
 from pathlib import Path
 
 import requests
-from pdfminer.high_level import extract_text
+from pypdf import PdfReader  # type: ignore
 
 
-MARKER_API_URL = "http://localhost:5001/{}"
 DIR_PATH = Path(__file__).parent
 ROOT_PATH = DIR_PATH.parent.parent
 WORKSPACE_DIR = ROOT_PATH / "workdir"
 
 
-def convert_pdf_to_md(pdf_path: Path, md_path: Path) -> None:
-    md_path.parent.mkdir(parents=True, exist_ok=True)
+def _convert_pdf_to_text(pdf_path: Path, txt_path: Path) -> None:
+    # Why not Marker? Because it is too heavy.
 
-    status_code = None
-    try:
-        response = requests.get(MARKER_API_URL.format("health"))
-        status_code = response.status_code
-    except Exception:
-        pass
+    txt_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if status_code != 200:
-        with md_path.open("w") as w:
-            w.write(extract_text(str(pdf_path.resolve())))
-        return
-    with pdf_path.open("rb") as pdf_file:
-        files = {"pdf_file": (pdf_path.name, pdf_path.open("rb"), "application/pdf")}
-        response = requests.post(MARKER_API_URL.format("convert"), files=files)
-    response.raise_for_status()
-    result = response.json()
-    markdown_text = result["result"]["markdown"]
-    md_path.write_text(markdown_text, encoding="utf-8")
+    full_text = ""
+    reader = PdfReader(str(pdf_path.resolve()))
+    for page_number, page in enumerate(reader.pages, start=1):
+        try:
+            text = page.extract_text()
+        except Exception:
+            continue
+        full_text += f"==== Page {page_number} ====\n{text}\n"
+    txt_path.write_text(full_text, encoding="utf-8")
 
 
 def arxiv_download(paper_id: str) -> str:
     """
-    A tool that downloads papers from Arxiv and converts them to text.
+    Downloads a paper from Arxiv and converts it to text.
+
+    Returns a text version of the paper.
+    Also saves both pdf and txt version of the paper to the work directory.
 
     Args:
         paper_id: ID of the paper on Arxiv. For instance: 2409.06820v1
@@ -50,10 +48,7 @@ def arxiv_download(paper_id: str) -> str:
         assert "application/pdf" in content_type.lower()
         with open(pdf_output_filename.resolve(), "wb") as fp:
             fp.write(response.content)
-    md_output_filename = WORKSPACE_DIR / f"{paper_id}.md"
-    text = ""
-    if not md_output_filename.exists():
-        convert_pdf_to_md(pdf_output_filename, md_output_filename)
-    with open(md_output_filename.resolve()) as r:
-        text = r.read()
-    return text
+    txt_output_filename = WORKSPACE_DIR / f"{paper_id}.txt"
+    if not txt_output_filename.exists():
+        _convert_pdf_to_text(pdf_output_filename, txt_output_filename)
+    return txt_output_filename.open().read()
