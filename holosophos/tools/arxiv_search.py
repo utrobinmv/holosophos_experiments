@@ -166,15 +166,17 @@ def arxiv_search(
     Operatore that can be used:
         AND, OR, ANDNOT
 
+    Please always specify the fields.
     You can include entire phrases by enclosing the phrase in double quotes.
+    Note, that boolean operators are strict. Do not overuse AND.
+    Names of authors should be in Latin script.
+    For example, search "Ilya Gusev" instead of "Илья Гусев"
 
     Example queries:
         abs:"machine learning"
         au:"del maestro"
         au:vaswani AND ti:"attention is all"
         (au:vaswani OR au:"del maestro") ANDNOT ti:attention
-
-    Note, that boolean operators are strict. Do not overuse AND.
 
     Returns a text containing papers' metadata including "Paper ID", "Title", "Authors",
     "Summary", "Comment", "Publication date", "Date of last update", "Categories"
@@ -226,4 +228,4 @@ def arxiv_search(
     if isinstance(entries, dict):
         entries = [entries]
     formatted_entries = _format_entries(entries, start_index=start_index)
-    return f"Total results: {total_results}\nOffset: {offset}\n{formatted_entries}"
+    return f"Found {total_results} papers\nOffset: {offset}\n{formatted_entries}"
