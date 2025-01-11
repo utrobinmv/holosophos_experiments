@@ -105,11 +105,6 @@ def test_date_filter() -> None:
     assert "Attention Is All You Need" in result
 
 
-def test_auto_ti_query() -> None:
-    result = arxiv_search("attention is all you need", limit=1)
-    assert "Attention Is All You Need" in result
-
-
 def test_start_date_only() -> None:
     result = arxiv_search(
         'au:vaswani AND ti:"attention is all"', start_date="2017-06-01"

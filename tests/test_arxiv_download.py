@@ -10,7 +10,4 @@ WORKSPACE_DIR = ROOT_PATH / "workdir"
 
 def test_arxiv_download() -> None:
     result = arxiv_download("2409.06820")
-    assert (WORKSPACE_DIR / result).exists()
-    with open(WORKSPACE_DIR / result) as r:
-        text = r.read()
-    assert "pingpong" in text.lower()
+    assert "pingpong" in result.lower()

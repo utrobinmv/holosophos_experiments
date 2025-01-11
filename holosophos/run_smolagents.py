@@ -1,4 +1,4 @@
-from smolagents import CodeAgent  # type: ignore
+from smolagents import CodeAgent, ManagedAgent  # type: ignore
 from smolagents.models import LiteLLMModel  # type: ignore
 from smolagents.default_tools import DuckDuckGoSearchTool, VisitWebpageTool  # type: ignore
 
@@ -7,6 +7,7 @@ from holosophos.tools import (
     arxiv_search,
     arxiv_download,
     bash,
+    DocumentQATool,
 )
 from holosophos.utils import get_prompt
 
@@ -38,20 +39,21 @@ MODEL2 = "anthropic/claude-3-5-sonnet-20241022"
 search_tool = convert_tool_to_smolagents(arxiv_search)
 download_tool = convert_tool_to_smolagents(arxiv_download)
 bash_tool = convert_tool_to_smolagents(bash)
-model = LiteLLMModel(model_id=MODEL1)
+
+model = LiteLLMModel(model_id=MODEL1, temperature=0.0)
+
 agent = CodeAgent(
     tools=[
         search_tool,
         download_tool,
         bash_tool,
-        #DuckDuckGoSearchTool,
-        VisitWebpageTool,
+        DocumentQATool(model),
     ],
     model=model,
     add_base_tools=False,
     max_steps=30,
     planning_interval=3,
     verbose=True,
-    system_prompt=get_prompt("system")
+    system_prompt=get_prompt("system"),
 )
 agent.run(PROMPT1)

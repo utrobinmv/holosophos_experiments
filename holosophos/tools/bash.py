@@ -8,7 +8,7 @@ _container = None
 _client = None
 
 BASE_IMAGE = "python:3.9-slim"
-DIR_PATH = pathlib.Path(__file__).parent.resolve()
+DIR_PATH = pathlib.Path(__file__).parent
 ROOT_PATH = DIR_PATH.parent.parent.resolve()
 WORKSPACE_DIR = ROOT_PATH / "workdir"
 DOCKER_WORKSPACE_DIR = "/workdir"

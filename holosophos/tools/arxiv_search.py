@@ -89,7 +89,6 @@ def _compose_query(
     end_date: Optional[str] = None,
 ) -> str:
     query: str = orig_query.replace(" AND NOT ", " ANDNOT ")
-
     if start_date or end_date:
         if not start_date:
             start_date = "1900-01-01"
@@ -166,11 +165,11 @@ def arxiv_search(
     Operatore that can be used:
         AND, OR, ANDNOT
 
-    Please always specify the fields.
+    Please always specify the fields. Search should be always field-specific.
     You can include entire phrases by enclosing the phrase in double quotes.
     Note, that boolean operators are strict. Do not overuse AND.
     Names of authors should be in Latin script.
-    For example, search "Ilya Gusev" instead of "Илья Гусев"
+    For example, search "Ilya Gusev" instead of "Илья Гусев".
 
     Example queries:
         abs:"machine learning"

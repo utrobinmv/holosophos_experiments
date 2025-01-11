@@ -4,7 +4,7 @@
 from pathlib import Path
 
 import requests
-from pypdf import PdfReader  # type: ignore
+from pypdf import PdfReader
 
 
 DIR_PATH = Path(__file__).parent
