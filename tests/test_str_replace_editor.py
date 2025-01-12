@@ -207,3 +207,15 @@ def test_str_replace_editor_large_file_handling() -> None:
         result = str_replace_editor("view", name, view_end_line=5)
         assert "<response clipped>" not in result
         assert len(result.splitlines()) == 5
+
+
+def test_str_replace_editor_append() -> None:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+        name = os.path.basename(f.name)
+        test_file = WORKSPACE_DIR / name
+        test_file.write_text(DOCUMENT1)
+
+        str_replace_editor("append", name, new_str="New line")
+
+        assert DOCUMENT1.strip() in test_file.read_text().strip()
+        assert "New line" in test_file.read_text().strip()

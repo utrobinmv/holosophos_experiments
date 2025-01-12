@@ -18,10 +18,17 @@ def _write(path: Path, file_text: str, overwrite: bool) -> str:
             not path.exists()
         ), f"Cannot write file, path already exists: {path}. Pass overwrite=True"
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        f.write(file_text)
+    path.write_text(file_text)
     _save_file_state(path, file_text.splitlines(True))
     return file_text
+
+
+def _append(path: Path, new_str: str) -> str:
+    content = path.open().read()
+    _save_file_state(path, content.splitlines(True))
+    new_content = "\n".join((content, new_str))
+    path.write_text(new_content)
+    return new_content
 
 
 def _view(
@@ -109,9 +116,9 @@ def _undo_edit(path: Path) -> str:
 def str_replace_editor(
     command: str,
     path: str,
+    new_str: Optional[str] = None,
     file_text: Optional[str] = None,
     old_str: Optional[str] = None,
-    new_str: Optional[str] = None,
     insert_line: Optional[int] = None,
     view_start_line: Optional[int] = None,
     view_end_line: Optional[int] = None,
@@ -126,6 +133,7 @@ def str_replace_editor(
     The `write` command cannot be used if the specified `path` already exists as a file.
     If a `command` generates a long output, it will be truncated and marked with `<response clipped>`.
     The `undo_edit` command will revert the last edit made to the file at `path`.
+    Always write arguments with keys, do not rely on positions.
 
     Notes for using the `str_replace` command:
     - The `old_str` parameter should match EXACTLY one or more consecutive lines from the original file.
@@ -135,12 +143,13 @@ def str_replace_editor(
     - The `new_str` parameter should contain the edited lines that should replace the `old_str`
 
     Examples:
-        Create a file with "Hello world!": str_replace_editor("write", file_text="Hello world!")
+        Write a file with "Hello world!": str_replace_editor("write", file_text="Hello world!")
         View a file with enumerated lines: str_replace_editor("view", "file.txt")
         View first three lines of a file: str_replace_editor("view", "file.txt", view_start_line=1, view_end_line=3)
         View lines from 5 to the end of a file: str_replace_editor("view", "file.txt", view_start_line=5)
         Replace "line1" with "line2": str_replace_editor("str_replace", "file.txt", old_str="line", new_str="line2")
         Insert "line2" after line 1: str_replace_editor("insert", "file.txt", insert_line=1, new_str="line2")
+        Append "line2" to the file: str_replace_editor("append", "file.txt", new_str="line2")
 
     Args:
         command: The commands to run. Allowed options are: `view`, `write`, `str_replace`, `insert`, `undo_edit`.
@@ -150,13 +159,13 @@ def str_replace_editor(
         file_text: Required for `write` command, with the content of the file to be writed.
         overwrite: Optional for `write` command. If True, the command is allowed to overwrite existing files.
         insert_line: Required for `insert` command. `new_str` will be inserted AFTER the line `insert_line` of `path`.
-        new_str: Required for `str_replace` containing the new string. Required for `insert` containing the string to insert.
+        new_str: Required for `str_replace`, `insert` and `append`.
         old_str: Required for `str_replace` containing the string in `path` to replace.
     """
     assert not path.startswith(
         "/"
     ), "Absolute path is not supported, only relative to the work directory"
-    valid_commands = ("view", "write", "str_replace", "insert", "undo_edit")
+    valid_commands = ("view", "write", "str_replace", "insert", "undo_edit", "append")
 
     path_obj = WORKSPACE_DIR / path
 
@@ -167,6 +176,9 @@ def str_replace_editor(
         return _write(
             path_obj, file_text, overwrite if overwrite is not None else False
         )
+    if command == "append":
+        assert new_str is not None, "'new_str' is required for 'append' command"
+        return _append(path_obj, new_str)
     if command == "insert":
         assert insert_line is not None, "'insert_line' is required for 'insert' command"
         assert new_str is not None, "'new_str' is required for 'insert' command"
