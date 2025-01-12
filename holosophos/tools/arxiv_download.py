@@ -6,10 +6,7 @@ from pathlib import Path
 import requests
 from pypdf import PdfReader
 
-
-DIR_PATH = Path(__file__).parent
-ROOT_PATH = DIR_PATH.parent.parent
-WORKSPACE_DIR = ROOT_PATH / "workdir"
+from holosophos.files import WORKSPACE_DIR
 
 
 def _convert_pdf_to_text(pdf_path: Path, txt_path: Path) -> None:

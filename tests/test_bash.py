@@ -1,6 +1,7 @@
 import os
 
-from holosophos.tools.bash import bash, WORKSPACE_DIR
+from holosophos.tools import bash
+from holosophos.files import WORKSPACE_DIR
 
 
 def test_bash() -> None:
