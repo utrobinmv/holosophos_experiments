@@ -23,7 +23,7 @@ def test_document_qa() -> None:
     model = LiteLLMModel(model_id="gpt-4o-mini", temperature=0.0)
     tool = DocumentQATool(model)
     answer = tool(
-        question="What is BLEU on the WMT 2014 English-to-German translation task?",
+        questions="What is BLEU on the WMT 2014 English-to-German translation task?",
         document=DOCUMENT1,
     )
     assert "28.4" in answer
@@ -32,7 +32,7 @@ def test_document_qa() -> None:
 def test_real_question() -> None:
     model = LiteLLMModel(model_id="gpt-4o", temperature=0.0)
     tool = DocumentQATool(model)
-    question = "What is the best model for the Russian language according to the role-play benchmark and its final score?"
+    questions = "What is the best model for the Russian language according to the role-play benchmark and its final score?"
     document = arxiv_download("2409.06820")
-    answer = tool(question=question, document=document)
+    answer = tool(questions=questions, document=document)
     assert "4.63" in answer

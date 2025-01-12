@@ -34,27 +34,27 @@ def test_str_replace_editor_view() -> None:
         assert result.strip().startswith("1")
         assert result.strip() == cmd_result.strip()
 
-        result = str_replace_editor("view", name, view_range=(1, 5))
+        result = str_replace_editor("view", name, view_start_line=1, view_end_line=5)
         cmd_result = os.popen(f"head -n 5 {str(test_file.resolve())} | cat -n").read()
         assert result.strip().startswith("1")
         assert result.strip() == cmd_result.strip()
 
-        result = str_replace_editor("view", name, view_range=(5, -1))
+        result = str_replace_editor("view", name, view_start_line=5)
         assert result.strip().startswith("5")
 
-        result = str_replace_editor("view", name, view_range=(5, 6))
+        result = str_replace_editor("view", name, view_start_line=5, view_end_line=6)
         assert result.strip().startswith("5")
         assert result.splitlines()[-1].strip().startswith("6")
 
 
-def test_str_replace_editor_create() -> None:
+def test_str_replace_editor_write() -> None:
     with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
         name = os.path.basename(f.name)
         test_file = WORKSPACE_DIR / name
         test_file.unlink(missing_ok=True)
         assert not test_file.exists()
 
-        str_replace_editor("create", name, file_text=DOCUMENT1)
+        str_replace_editor("write", name, file_text=DOCUMENT1)
         assert test_file.exists()
         assert DOCUMENT1.strip() == test_file.open().read().strip()
 
@@ -116,23 +116,21 @@ def test_str_replace_editor_view_invalid_range() -> None:
         test_file.write_text(DOCUMENT1)
 
         with pytest.raises(AssertionError):
-            str_replace_editor("view", name, view_range=(-1, 5))
+            str_replace_editor("view", name, view_start_line=-1)
 
         with pytest.raises(AssertionError):
-            str_replace_editor("view", name, view_range=(10, 5))
-
-        with pytest.raises(AssertionError):
-            str_replace_editor("view", name, view_range=(1,))  # type: ignore
+            str_replace_editor("view", name, view_start_line=10, view_end_line=5)
 
 
-def test_str_replace_editor_create_existing_file() -> None:
+def test_str_replace_editor_write_existing_file() -> None:
     with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
         name = os.path.basename(f.name)
         test_file = WORKSPACE_DIR / name
         test_file.write_text(DOCUMENT1)
 
         with pytest.raises(AssertionError):
-            str_replace_editor("create", name, file_text="New content")
+            str_replace_editor("write", name, file_text="New content")
+        str_replace_editor("write", name, file_text="New content", overwrite=True)
 
 
 def test_str_replace_editor_missing_required_params() -> None:
@@ -142,7 +140,7 @@ def test_str_replace_editor_missing_required_params() -> None:
         test_file.write_text(DOCUMENT1)
 
         with pytest.raises(AssertionError):
-            str_replace_editor("create", name)
+            str_replace_editor("write", name)
 
         with pytest.raises(AssertionError):
             str_replace_editor("insert", name, insert_line=0)
@@ -206,6 +204,6 @@ def test_str_replace_editor_large_file_handling() -> None:
         assert "<response clipped>" in result
         assert len(result) <= 2100
 
-        result = str_replace_editor("view", name, view_range=(1, 5))
+        result = str_replace_editor("view", name, view_end_line=5)
         assert "<response clipped>" not in result
         assert len(result.splitlines()) == 5

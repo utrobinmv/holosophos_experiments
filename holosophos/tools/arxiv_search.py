@@ -168,6 +168,7 @@ def arxiv_search(
     Please always specify the fields. Search should be always field-specific.
     You can include entire phrases by enclosing the phrase in double quotes.
     Note, that boolean operators are strict. Do not overuse AND.
+    Do not include date constraints into the query, use "start_date" and "end_date" parameters instead.
     Names of authors should be in Latin script.
     For example, search "Ilya Gusev" instead of "Илья Гусев".
 
