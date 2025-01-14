@@ -1,3 +1,5 @@
+from typing import Optional
+
 from smolagents.tools import Tool  # type: ignore
 from smolagents.models import Model  # type: ignore
 
@@ -29,7 +31,7 @@ It takes questions and a document as inputs and generates an answer based on the
 
 Example:
     >>> document = "The quick brown fox jumps over the lazy dog."
-    >>> answer = document_qa("What animal is mentioned? How many of them?", document)
+    >>> answer = document_qa(questions="What animal is mentioned? How many of them?", document=document)
     >>> print(answer)
     "The document mentions two animals: a fox and a dog. 2 animals."
 
@@ -44,10 +46,17 @@ class DocumentQATool(Tool):  # type: ignore
         "questions": {
             "type": "string",
             "description": "Questions to be answered about the document.",
+            "nullable": True,
         },
         "document": {
             "type": "string",
             "description": "The full text of the document to analyze.",
+            "nullable": True,
+        },
+        "question": {
+            "type": "string",
+            "description": "Alias for 'questions'",
+            "nullable": True,
         },
     }
     output_type = "string"
@@ -56,9 +65,16 @@ class DocumentQATool(Tool):  # type: ignore
         self.model = model
         super().__init__()
 
-    def forward(self, questions: str, document: str) -> str:
-        if not questions.strip() or not document.strip():
-            raise ValueError("Both questions and document must be non-empty strings")
+    def forward(
+        self,
+        questions: Optional[str] = None,
+        document: Optional[str] = None,
+        question: Optional[str] = None,
+    ) -> str:
+        if question and not questions:
+            questions = question
+        assert questions and questions.strip(), "Please provide non-empty 'questions'"
+        assert document and document.strip(), "Please provide non-empty 'document'"
 
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
