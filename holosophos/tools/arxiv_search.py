@@ -2,6 +2,7 @@
 # https://github.com/jonatasgrosman/findpapers/blob/master/findpapers/searchers/arxiv_searcher.py
 # https://info.arxiv.org/help/api/user-manual.html
 
+import re
 from typing import Optional, Literal, List, Dict, Any, Union
 from datetime import datetime, date
 from urllib3.util.retry import Retry
@@ -81,6 +82,10 @@ def _convert_to_yyyymmddtttt(date_str: str) -> str:
         return date_obj.strftime("%Y%m%d") + "0000"
     except ValueError as e:
         raise ValueError("Invalid date format. Please use YYYY-MM-DD format.") from e
+
+
+def _has_cyrillic(text: str) -> bool:
+    return bool(re.search("[а-яА-Я]", text))
 
 
 def _compose_query(
@@ -206,6 +211,7 @@ def arxiv_search(
     assert offset >= 0, "Error: offset must be 0 or positive number"
     assert limit < 100, "Error: limit is too large, it should be less than 100"
     assert limit > 0, "Error: limit should be greater than 0"
+    assert not _has_cyrillic(query), "Error: use only Latin script for queries"
 
     fixed_query: str = _compose_query(query, start_date, end_date)
     url = URL_TEMPLATE.format(

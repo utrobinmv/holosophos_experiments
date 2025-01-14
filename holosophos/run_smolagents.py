@@ -44,7 +44,7 @@ download_tool = convert_tool_to_smolagents(arxiv_download)
 bash_tool = convert_tool_to_smolagents(bash)
 str_replace_editor_tool = convert_tool_to_smolagents(str_replace_editor)
 
-model = LiteLLMModel(model_id=MODEL2, temperature=0.0)
+model = LiteLLMModel(model_id=MODEL1, temperature=0.0)
 model.__call__ = partial(model.__call__, max_tokens=8192)
 
 agent = CodeAgent(
@@ -60,8 +60,7 @@ agent = CodeAgent(
     model=model,
     add_base_tools=False,
     max_steps=30,
-    planning_interval=3,
-    verbose=True,
+    planning_interval=4,
     system_prompt=get_prompt("system"),
 )
 agent.run(PROMPT2)

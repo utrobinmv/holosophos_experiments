@@ -18,12 +18,16 @@ def _write(path: Path, file_text: str, overwrite: bool) -> str:
             not path.exists()
         ), f"Cannot write file, path already exists: {path}. Pass overwrite=True"
     path.parent.mkdir(parents=True, exist_ok=True)
+    lines = []
+    if path.exists():
+        lines = path.read_text().splitlines(True)
+    _save_file_state(path, lines)
     path.write_text(file_text)
-    _save_file_state(path, file_text.splitlines(True))
     return file_text
 
 
 def _append(path: Path, new_str: str) -> str:
+    assert path.exists(), "You can 'append' only to existing files"
     content = path.open().read()
     _save_file_state(path, content.splitlines(True))
     new_content = "\n".join((content, new_str))
@@ -35,6 +39,7 @@ def _view(
     path: Path,
     view_start_line: Optional[int] = None,
     view_end_line: Optional[int] = None,
+    show_lines: bool = False,
     max_output_length: int = 2048,
 ) -> str:
     assert path.exists(), f"Path does not exist: {path}"
@@ -71,11 +76,16 @@ def _view(
     total_length = 0
     for i, line in enumerate(lines, enum_start_line):
         prefix = f"{i:6d}\t"
-        current_line = prefix + line
+        current_line = line
+        if show_lines:
+            current_line = prefix + current_line
         if total_length + len(current_line) > max_output_length:
-            space_for_text = max_output_length - total_length - len(prefix)
+            space_for_text = max_output_length - total_length
             space_for_text = max(space_for_text, 0)
-            output.append(prefix + line[:space_for_text] + " <response clipped>")
+            current_line = line[:space_for_text]
+            if show_lines:
+                current_line = prefix + current_line
+            output.append(current_line + " <response clipped>")
             break
         output.append(current_line)
         total_length += len(current_line)
@@ -123,12 +133,13 @@ def str_replace_editor(
     view_start_line: Optional[int] = None,
     view_end_line: Optional[int] = None,
     overwrite: Optional[bool] = False,
+    show_lines: Optional[bool] = False,
 ) -> str:
     """
     Custom editing tool for viewing, creating and editing files.
     State is persistent across command calls and discussions with the user.
-    If `path` is a file, `view` displays the result of applying `cat -n`.
-    Attention! It means that for every line it's number is prepended! Do not expect view to return the original text.
+    If `path` is a file and `show_lines` is True, `view` displays the result of applying `cat -n`.
+    If `path` is a file and `show_lines` is False, `view` displays the result of applying `cat`.
     If `path` is a directory, `view` lists non-hidden files and directories up to 2 levels deep.
     The `write` command cannot be used if the specified `path` already exists as a file.
     If a `command` generates a long output, it will be truncated and marked with `<response clipped>`.
@@ -161,6 +172,7 @@ def str_replace_editor(
         insert_line: Required for `insert` command. `new_str` will be inserted AFTER the line `insert_line` of `path`.
         new_str: Required for `str_replace`, `insert` and `append`.
         old_str: Required for `str_replace` containing the string in `path` to replace.
+        show_lines: Optional for view command. If True, the command will also output line numbers.
     """
     assert not path.startswith(
         "/"
@@ -170,7 +182,10 @@ def str_replace_editor(
     path_obj = WORKSPACE_DIR / path
 
     if command == "view":
-        return _view(path_obj, view_start_line, view_end_line)
+        show_lines = show_lines if show_lines is not None else False
+        return _view(
+            path_obj, view_start_line, view_end_line, show_lines, max_output_length=2048
+        )
     if command == "write":
         assert file_text is not None, "'file_text' is required for 'write' command"
         return _write(

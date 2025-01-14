@@ -29,20 +29,28 @@ def test_str_replace_editor_view() -> None:
         name = os.path.basename(f.name)
         test_file = WORKSPACE_DIR / name
 
-        result = str_replace_editor("view", name)
+        result = str_replace_editor("view", name, show_lines=True)
         cmd_result = os.popen(f"cat -n {str(test_file.resolve())}").read()
         assert result.strip().startswith("1")
         assert result.strip() == cmd_result.strip()
 
-        result = str_replace_editor("view", name, view_start_line=1, view_end_line=5)
+        result = str_replace_editor("view", name)
+        cmd_result = os.popen(f"cat {str(test_file.resolve())}").read()
+        assert result.strip() == cmd_result.strip()
+
+        result = str_replace_editor(
+            "view", name, view_start_line=1, view_end_line=5, show_lines=True
+        )
         cmd_result = os.popen(f"head -n 5 {str(test_file.resolve())} | cat -n").read()
         assert result.strip().startswith("1")
         assert result.strip() == cmd_result.strip()
 
-        result = str_replace_editor("view", name, view_start_line=5)
+        result = str_replace_editor("view", name, view_start_line=5, show_lines=True)
         assert result.strip().startswith("5")
 
-        result = str_replace_editor("view", name, view_start_line=5, view_end_line=6)
+        result = str_replace_editor(
+            "view", name, view_start_line=5, view_end_line=6, show_lines=True
+        )
         assert result.strip().startswith("5")
         assert result.splitlines()[-1].strip().startswith("6")
 
@@ -205,6 +213,7 @@ def test_str_replace_editor_large_file_handling() -> None:
         assert len(result) <= 2100
 
         result = str_replace_editor("view", name, view_end_line=5)
+        print(result)
         assert "<response clipped>" not in result
         assert len(result.splitlines()) == 5
 
