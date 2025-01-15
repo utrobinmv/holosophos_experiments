@@ -181,9 +181,7 @@ def test_text_editor_str_replace_no_match() -> None:
         test_file.write_text(DOCUMENT1)
 
         with pytest.raises(AssertionError):
-            text_editor(
-                "str_replace", name, old_str="NonexistentText", new_str="New"
-            )
+            text_editor("str_replace", name, old_str="NonexistentText", new_str="New")
 
 
 def test_text_editor_str_replace_multiple_matches() -> None:
