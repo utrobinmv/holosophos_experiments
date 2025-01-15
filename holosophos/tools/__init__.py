@@ -5,7 +5,7 @@ from smolagents.tools import tool, Tool  # type: ignore
 from holosophos.tools.arxiv_search import arxiv_search
 from holosophos.tools.arxiv_download import arxiv_download
 from holosophos.tools.bash import bash
-from holosophos.tools.str_replace_editor import str_replace_editor
+from holosophos.tools.text_editor import text_editor
 from holosophos.tools.document_qa import DocumentQATool
 
 
@@ -19,5 +19,5 @@ __all__ = [
     "convert_tool_to_smolagents",
     "DocumentQATool",
     "bash",
-    "str_replace_editor",
+    "text_editor",
 ]

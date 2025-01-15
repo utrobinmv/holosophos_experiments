@@ -35,6 +35,39 @@ def _append(path: Path, new_str: str) -> str:
     return new_content
 
 
+def _insert(path: Path, insert_line: int, new_str: str) -> str:
+    assert path.is_file(), f"File not found: {path}"
+    lines = path.open().readlines()
+    assert 0 <= insert_line <= len(lines), f"Invalid insert_line: {insert_line}"
+    _save_file_state(path, lines)
+    lines.insert(insert_line, new_str if new_str.endswith("\n") else new_str + "\n")
+    new_content = "".join(lines)
+    path.write_text(new_content)
+    return new_content
+
+
+def _str_replace(path: Path, old_str: str, new_str: str) -> str:
+    assert path.is_file(), f"File not found: {path}"
+    content = path.open().read()
+    count = content.count(old_str)
+    assert count != 0, "old_str not found in file"
+    assert count == 1, "old_str is not unique in file"
+    _save_file_state(path, content.splitlines(True))
+    new_content = content.replace(old_str, new_str)
+    path.write_text(new_content)
+    return new_content
+
+
+def _undo_edit(path: Path) -> str:
+    text_path = str(path.resolve())
+    assert text_path in _file_history, f"No edit history available for: {text_path}"
+    assert _file_history[text_path], f"No edit history available for: {text_path}"
+    previous_state = _file_history[text_path].pop()
+    new_content = "".join(previous_state)
+    path.write_text(new_content)
+    return new_content
+
+
 def _view(
     path: Path,
     view_start_line: Optional[int] = None,
@@ -92,38 +125,7 @@ def _view(
     return "".join(output)
 
 
-def _insert(path: Path, insert_line: int, new_str: str) -> str:
-    assert path.is_file(), f"File not found: {path}"
-    lines = path.open().readlines()
-    assert 0 <= insert_line <= len(lines), f"Invalid insert_line: {insert_line}"
-    _save_file_state(path, lines)
-    lines.insert(insert_line, new_str if new_str.endswith("\n") else new_str + "\n")
-    path.open("w").writelines(lines)
-    return "".join(lines)
-
-
-def _str_replace(path: Path, old_str: str, new_str: str) -> str:
-    assert path.is_file(), f"File not found: {path}"
-    content = path.open().read()
-    count = content.count(old_str)
-    assert count != 0, "old_str not found in file"
-    assert count == 1, "old_str is not unique in file"
-    _save_file_state(path, content.splitlines(True))
-    new_content = content.replace(old_str, new_str)
-    path.open("w").write(new_content)
-    return new_content
-
-
-def _undo_edit(path: Path) -> str:
-    text_path = str(path.resolve())
-    assert text_path in _file_history, f"No edit history available for: {text_path}"
-    assert _file_history[text_path], f"No edit history available for: {text_path}"
-    previous_state = _file_history[text_path].pop()
-    path.open("w").writelines(previous_state)
-    return "".join(previous_state)
-
-
-def str_replace_editor(
+def text_editor(
     command: str,
     path: str,
     new_str: Optional[str] = None,
@@ -146,7 +148,7 @@ def str_replace_editor(
     The `undo_edit` command will revert the last edit made to the file at `path`.
     Always write arguments with keys, do not rely on positions.
 
-    Notes for using the `str_replace` command:
+    Notes for using the `text_editor` command:
     - The `old_str` parameter should match EXACTLY one or more consecutive lines from the original file.
     - Be mindful of whitespaces!
     - If the `old_str` parameter is not unique in the file, the replacement will not be performed.
@@ -154,13 +156,13 @@ def str_replace_editor(
     - The `new_str` parameter should contain the edited lines that should replace the `old_str`
 
     Examples:
-        Write a file with "Hello world!": str_replace_editor("write", file_text="Hello world!")
-        View a file with enumerated lines: str_replace_editor("view", "file.txt")
-        View first three lines of a file: str_replace_editor("view", "file.txt", view_start_line=1, view_end_line=3)
-        View lines from 5 to the end of a file: str_replace_editor("view", "file.txt", view_start_line=5)
-        Replace "line1" with "line2": str_replace_editor("str_replace", "file.txt", old_str="line", new_str="line2")
-        Insert "line2" after line 1: str_replace_editor("insert", "file.txt", insert_line=1, new_str="line2")
-        Append "line2" to the file: str_replace_editor("append", "file.txt", new_str="line2")
+        Write a file with "Hello world!": text_editor("write", file_text="Hello world!")
+        View a file with enumerated lines: text_editor("view", "file.txt")
+        View first three lines of a file: text_editor("view", "file.txt", view_start_line=1, view_end_line=3)
+        View lines from 5 to the end of a file: text_editor("view", "file.txt", view_start_line=5)
+        Replace "line1" with "line2": text_editor("str_replace", "file.txt", old_str="line", new_str="line2")
+        Insert "line2" after line 1: text_editor("insert", "file.txt", insert_line=1, new_str="line2")
+        Append "line2" to the file: text_editor("append", "file.txt", new_str="line2")
 
     Args:
         command: The commands to run. Allowed options are: `view`, `write`, `str_replace`, `insert`, `undo_edit`.

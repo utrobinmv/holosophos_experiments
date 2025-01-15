@@ -10,7 +10,7 @@ from holosophos.tools import (
     arxiv_download,
     bash,
     DocumentQATool,
-    str_replace_editor,
+    text_editor,
 )
 from holosophos.utils import get_prompt
 
@@ -42,17 +42,19 @@ MODEL2 = "anthropic/claude-3-5-sonnet-20241022"
 search_tool = convert_tool_to_smolagents(arxiv_search)
 download_tool = convert_tool_to_smolagents(arxiv_download)
 bash_tool = convert_tool_to_smolagents(bash)
-str_replace_editor_tool = convert_tool_to_smolagents(str_replace_editor)
+text_editor_tool = convert_tool_to_smolagents(text_editor)
 
-model = LiteLLMModel(model_id=MODEL1, temperature=0.0)
-model.__call__ = partial(model.__call__, max_tokens=8192)
+model = LiteLLMModel(model_id=MODEL2, temperature=0.0)
+current_defaults = list(model.__call__.__func__.__defaults__)
+current_defaults[2] = 8192
+model.__call__.__func__.__defaults__ = tuple(current_defaults)
 
 agent = CodeAgent(
     tools=[
         search_tool,
         download_tool,
         bash_tool,
-        str_replace_editor_tool,
+        text_editor_tool,
         DocumentQATool(model),
         # DuckDuckGoSearchTool(),
         # VisitWebpageTool(),
@@ -60,7 +62,7 @@ agent = CodeAgent(
     model=model,
     add_base_tools=False,
     max_steps=30,
-    planning_interval=4,
+    planning_interval=3,
     system_prompt=get_prompt("system"),
 )
 agent.run(PROMPT2)
