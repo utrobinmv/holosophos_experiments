@@ -3,7 +3,7 @@
 # https://info.arxiv.org/help/api/user-manual.html
 
 import re
-from typing import Optional, Literal, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, date
 from urllib3.util.retry import Retry
 
@@ -189,7 +189,7 @@ def arxiv_search(
     Args:
         query: The search query, required.
         offset: The offset in search results. If it is 10, first 10 items will be skipped. 0 by default.
-        limit: The maximum number of items that will be returned. 3 by default.
+        limit: The maximum number of items that will be returned. limit=3 by default, limit=5 is the maximum.
         start_date: Start date in %Y-%m-%d format. None by default.
         end_date: End date in %Y-%m-%d format. None by default.
         sort_by: 3 options to sort by: relevance, lastUpdatedDate, submittedDate. relevance by default.
@@ -199,6 +199,7 @@ def arxiv_search(
     assert isinstance(query, str), "Error: Your search query must be a string"
     assert isinstance(offset, int), "Error: offset should be an integer"
     assert isinstance(limit, int), "Error: limit should be an integer"
+    assert 1 <= limit <= 5, "Error: limit should be between 1 and 5"
     assert isinstance(sort_by, str), "Error: sort_by should be a string"
     assert isinstance(sort_order, str), "Error: sort_order should be a string"
     assert query.strip(), "Error: Your query should not be empty"

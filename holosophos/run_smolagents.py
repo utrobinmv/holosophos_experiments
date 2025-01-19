@@ -1,17 +1,8 @@
-from functools import partial
-
-from smolagents import CodeAgent, ManagedAgent  # type: ignore
+from smolagents import CodeAgent  # type: ignore
 from smolagents.models import LiteLLMModel  # type: ignore
-from smolagents.default_tools import DuckDuckGoSearchTool, VisitWebpageTool  # type: ignore
 
-from holosophos.tools import (
-    convert_tool_to_smolagents,
-    arxiv_search,
-    arxiv_download,
-    bash,
-    DocumentQATool,
-    text_editor,
-)
+from holosophos.tools import text_editor_tool, bash_tool
+from holosophos.agents import get_librarian_agent
 from holosophos.utils import get_prompt
 
 PROMPT1 = """
@@ -46,27 +37,19 @@ Don't stop until you write a full coherent paper.
 MODEL1 = "gpt-4o-mini"
 MODEL2 = "anthropic/claude-3-5-sonnet-20241022"
 
-search_tool = convert_tool_to_smolagents(arxiv_search)
-download_tool = convert_tool_to_smolagents(arxiv_download)
-bash_tool = convert_tool_to_smolagents(bash)
-text_editor_tool = convert_tool_to_smolagents(text_editor)
-
+max_print_outputs_length = 10000
 model = LiteLLMModel(model_id=MODEL1, temperature=0.0, max_tokens=8192)
 agent = CodeAgent(
-    tools=[
-        search_tool,
-        download_tool,
-        bash_tool,
-        text_editor_tool,
-        DocumentQATool(model),
-        DuckDuckGoSearchTool(),
-        VisitWebpageTool(),
+    tools=[text_editor_tool, bash_tool],
+    managed_agents=[
+        get_librarian_agent(model, max_print_outputs_length=max_print_outputs_length)
     ],
     model=model,
     add_base_tools=False,
     max_steps=50,
     planning_interval=3,
+    verbosity_level=2,
     system_prompt=get_prompt("system"),
-    max_print_outputs_length=10000,
+    max_print_outputs_length=max_print_outputs_length,
 )
 agent.run(PROMPT1)

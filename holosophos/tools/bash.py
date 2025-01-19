@@ -1,4 +1,3 @@
-import pathlib
 import docker  # type: ignore
 import atexit
 import signal

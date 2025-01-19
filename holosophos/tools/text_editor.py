@@ -1,11 +1,11 @@
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from pathlib import Path
 
 from holosophos.files import WORKSPACE_DIR_PATH
 from holosophos.utils import truncate_content
 
-WRITE_MAX_OUTPUT_LENGTH = 1500
+WRITE_MAX_OUTPUT_LENGTH = 500
 READ_MAX_OUTPUT_LENGTH = 3000
 
 # Global state for undo operations
@@ -154,7 +154,7 @@ def text_editor(
     - The `new_str` parameter should contain the edited lines that should replace the `old_str`
 
     Examples:
-        Write a file with "Hello world!": text_editor("write", file_text="Hello world!")
+        Write a file with "Hello world!": text_editor("write", "file.txt", file_text="Hello world!")
         View a file with enumerated lines: text_editor("view", "file.txt")
         View first three lines of a file: text_editor("view", "file.txt", view_start_line=1, view_end_line=3)
         View lines from 5 to the end of a file: text_editor("view", "file.txt", view_start_line=5)

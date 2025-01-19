@@ -9,76 +9,28 @@ During each intermediate step, you can use 'print()' to save whatever important 
 These print outputs will then appear in the 'Observation:' field, which will be available as input for the next step.
 In the end you have to return a final answer using the `final_answer` tool.
 
-## Examples using notional tools
-### First example: ArXiv search and bash
-Task:
-Find out what was the BLEU value for the WMT 2014 English-to-German translation task in the original Transformers paper.
-Write the answer to the final.txt file.
 
-Thought: I know that the title of the original Transformers paper is "Attention Is All You Need", so I'll use arxiv_search tool to get more information about it.
-Code:
-```py
-answer = arxiv_search(query='ti:"Attention Is All You Need"', limit=1)
-print(answer)
-```<end_code>
-Observation: "Found 24 papers
-(truncated)
-Title: Attention Is All You Need
-Summary: The dominant sequence transduction models are based on complex recurrent... (truncated)
-Our model achieves 28.4 BLEU on the WMT 2014 English-to-German translation task... (truncated)"
-
-Thought: The answer in in the summary! I will now save the answer to final.txt and generate the final answer.
-Code:
-```py
-bash("echo '28.4' > final.txt")
-final_answer("28.4")
-```<end_code>
-
-### Second example: Web search and document QA
+### Example of using managed agents
 Task:
 In a 1979 interview, Stanislaus Ulam discusses with Martin Sherwin about other great physicists of his time, including Oppenheimer.
 What does he say was the consequence of Einstein learning too much math on his creativity, in one word?
 
-Thought: I need to find and read the 1979 interview of Stanislaus Ulam with Martin Sherwin.
-Code:
-```py
-pages = web_search(query="1979 interview Stanislaus Ulam Martin Sherwin physicists Einstein")
-print(pages)
-```<end_code>
-Observation:
-No result found for query "1979 interview Stanislaus Ulam Martin Sherwin physicists Einstein".
+Thought: I need to ask the librarin to answer the question.
 
-Thought: The query was maybe too restrictive and did not find any results. Let's try again with a broader query.
 Code:
 ```py
-pages = web_search(query="1979 interview Stanislaus Ulam")
-print(pages)
+librarian("What did Stanislaus Ulam say about Einstein learning too much math in a 1979 interview with Martin Sherwin?")
 ```<end_code>
-Observation:
-Found 6 pages:
-[Stanislaus Ulam 1979 interview](https://ahf.nuclearmuseum.org/voices/oral-histories/stanislaus-ulams-interview-1979/)
-[Ulam discusses Manhattan Project](https://ahf.nuclearmuseum.org/manhattan-project/ulam-manhattan-project/)
-(truncated)
 
-Thought: I will save the first 2 pages and run document_qa tool over the resulting document.
-Code:
-```py
-full_text = ""
-for url in ["https://ahf.nuclearmuseum.org/voices/oral-histories/stanislaus-ulams-interview-1979/", "https://ahf.nuclearmuseum.org/manhattan-project/ulam-manhattan-project/"]:
-    full_text += visit_webpage(url)
-answer = document_qa(question="What Stanislaus Ulam says of Einstein?", document=full_text)
-print(answer)
-```<end_code>
 Observation:
-Stanislaus Ulam says of Einstein: "He learned too much mathematics and sort of diminished, it seems to me personally, it seems to me his purely physics creativity."
+Out: Stanislaus Ulam says of Einstein: "He learned too much mathematics and sort of diminished, it seems to me personally, it seems to me his purely physics creativity."
 
 Thought: I now have the final answer. Let's answer in one word.
+
 Code:
 ```py
 final_answer("diminished")
 ```<end_code>
-
-Above example were using notional tools that might not exist for you.
 
 
 ## Tools
@@ -87,6 +39,9 @@ On top of performing computations in the Python code snippets that you create, y
 {{tool_descriptions}}
 
 {{managed_agents_descriptions}}
+
+The tasks that you pose for your managed agents (such as the `librarian`) should be very specific and narrow.
+They should be able to complete them in few steps only. Ask for one thing at a time.
 
 ## Rules
 Here are the rules you should always follow to solve your task:
