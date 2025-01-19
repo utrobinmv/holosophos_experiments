@@ -10,7 +10,7 @@ import bs4
 from markdownify import MarkdownConverter  # type: ignore
 from pypdf import PdfReader
 
-from holosophos.files import WORKSPACE_DIR
+from holosophos.files import WORKSPACE_DIR_PATH
 
 
 class ArxivHTMLConverter(MarkdownConverter):  # type: ignore
@@ -89,7 +89,7 @@ def _get_md_from_html(paper_id: str) -> str:
 
 def _get_text_from_pdf(paper_id: str) -> str:
     url = f"https://arxiv.org/pdf/{paper_id}"
-    pdf_path: Path = WORKSPACE_DIR / (paper_id + ".pdf")
+    pdf_path: Path = WORKSPACE_DIR_PATH / (paper_id + ".pdf")
     if not pdf_path.exists():
         response = requests.get(url)
         response.raise_for_status()
@@ -128,6 +128,6 @@ def arxiv_download(paper_id: str) -> str:
     except requests.exceptions.HTTPError:
         content = _get_text_from_pdf(paper_id)
 
-    md_output_filename = WORKSPACE_DIR / f"{paper_id}.md"
+    md_output_filename = WORKSPACE_DIR_PATH / f"{paper_id}.md"
     md_output_filename.write_text(content)
     return content

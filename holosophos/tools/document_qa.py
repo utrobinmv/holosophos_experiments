@@ -26,7 +26,7 @@ Your citations and answers:"""
 
 DESCRIPTION = """
 Answer questions about a document.
-Use this function when you need to find relevant information in a big document.
+Use this tool when you need to find relevant information in a big document.
 It takes questions and a document as inputs and generates an answer based on the document.
 
 Example:

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from holosophos.tools import arxiv_download
-from holosophos.files import WORKSPACE_DIR
+from holosophos.files import WORKSPACE_DIR_PATH
 
 
 def test_arxiv_download() -> None:

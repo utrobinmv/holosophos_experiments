@@ -4,7 +4,7 @@ import os
 import pytest
 
 from holosophos.tools import text_editor
-from holosophos.files import WORKSPACE_DIR
+from holosophos.files import WORKSPACE_DIR_PATH
 
 DOCUMENT1 = """
 The dominant sequence transduction models are based on complex recurrent or convolutional
@@ -23,11 +23,11 @@ English constituency parsing both with large and limited training data.
 
 
 def test_text_editor_view() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         f.write(DOCUMENT1)
         f.flush()
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
 
         result = text_editor("view", name, show_lines=True)
         cmd_result = os.popen(f"cat -n {str(test_file.resolve())}").read()
@@ -56,9 +56,9 @@ def test_text_editor_view() -> None:
 
 
 def test_text_editor_write() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
         test_file.unlink(missing_ok=True)
         assert not test_file.exists()
 
@@ -68,9 +68,9 @@ def test_text_editor_write() -> None:
 
 
 def test_text_editor_insert() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
         test_file.write_text(DOCUMENT1)
 
         text_editor("insert", name, insert_line=0, new_str="Hello there!")
@@ -81,9 +81,9 @@ def test_text_editor_insert() -> None:
 
 
 def test_text_editor_str_replace() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
         test_file.write_text(DOCUMENT1)
 
         text_editor("str_replace", name, old_str="41.8", new_str="41.9")
@@ -92,9 +92,9 @@ def test_text_editor_str_replace() -> None:
 
 
 def test_text_editor_undo_edit() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
         test_file.write_text(DOCUMENT1)
 
         text_editor("str_replace", name, old_str="41.8", new_str="41.9")
@@ -118,9 +118,9 @@ def test_text_editor_view_directory() -> None:
 
 
 def test_text_editor_view_invalid_range() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
         test_file.write_text(DOCUMENT1)
 
         with pytest.raises(AssertionError):
@@ -131,9 +131,9 @@ def test_text_editor_view_invalid_range() -> None:
 
 
 def test_text_editor_write_existing_file() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
         test_file.write_text(DOCUMENT1)
 
         with pytest.raises(AssertionError):
@@ -142,9 +142,9 @@ def test_text_editor_write_existing_file() -> None:
 
 
 def test_text_editor_missing_required_params() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
         test_file.write_text(DOCUMENT1)
 
         with pytest.raises(AssertionError):
@@ -158,9 +158,9 @@ def test_text_editor_missing_required_params() -> None:
 
 
 def test_text_editor_undo_multiple() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
         test_file.write_text(DOCUMENT1)
 
         text_editor("str_replace", name, old_str="41.8", new_str="41.9")
@@ -175,9 +175,9 @@ def test_text_editor_undo_multiple() -> None:
 
 
 def test_text_editor_str_replace_no_match() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
         test_file.write_text(DOCUMENT1)
 
         with pytest.raises(AssertionError):
@@ -185,9 +185,9 @@ def test_text_editor_str_replace_no_match() -> None:
 
 
 def test_text_editor_str_replace_multiple_matches() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
         test_file.write_text("Hello\nHello\nHello")
 
         with pytest.raises(AssertionError):
@@ -195,9 +195,9 @@ def test_text_editor_str_replace_multiple_matches() -> None:
 
 
 def test_text_editor_large_file_handling() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
 
         large_content = ""
         for i in range(1000):
@@ -207,19 +207,18 @@ def test_text_editor_large_file_handling() -> None:
         test_file.write_text(large_content)
 
         result = text_editor("view", name)
-        assert "<response clipped>" in result
-        assert len(result) <= 2100
+        assert "This content has been truncated" in result
+        assert len(result) <= 3100
 
         result = text_editor("view", name, view_end_line=5)
-        print(result)
         assert "<response clipped>" not in result
         assert len(result.splitlines()) == 5
 
 
 def test_text_editor_append() -> None:
-    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR, mode="w+") as f:
+    with tempfile.NamedTemporaryFile(dir=WORKSPACE_DIR_PATH, mode="w+") as f:
         name = os.path.basename(f.name)
-        test_file = WORKSPACE_DIR / name
+        test_file = WORKSPACE_DIR_PATH / name
         test_file.write_text(DOCUMENT1)
 
         text_editor("append", name, new_str="New line")

@@ -1,7 +1,7 @@
 import os
 
 from holosophos.tools import bash
-from holosophos.files import WORKSPACE_DIR
+from holosophos.files import WORKSPACE_DIR_PATH
 
 
 def test_bash() -> None:
@@ -12,7 +12,7 @@ def test_bash() -> None:
     assert result == "/workdir"
 
     result = bash("touch dummy")
-    assert os.path.exists(WORKSPACE_DIR / "dummy")
+    assert os.path.exists(WORKSPACE_DIR_PATH / "dummy")
 
     result = bash("fddafad")
     assert "fddafad: command not found" in result

@@ -4,14 +4,14 @@ import atexit
 import signal
 from typing import Optional, Any
 
-from holosophos.files import WORKSPACE_DIR
+from holosophos.files import WORKSPACE_DIR_PATH
 
 
 _container = None
 _client = None
 
 BASE_IMAGE = "python:3.9-slim"
-DOCKER_WORKSPACE_DIR = "/workdir"
+DOCKER_WORKSPACE_DIR_PATH = "/workdir"
 
 
 def cleanup_container(
@@ -65,12 +65,20 @@ def bash(command: str) -> str:
                 name="bash_runner",
                 tty=True,
                 stdin_open=True,
-                volumes={WORKSPACE_DIR: {"bind": DOCKER_WORKSPACE_DIR, "mode": "rw"}},
-                working_dir=DOCKER_WORKSPACE_DIR,
+                volumes={
+                    WORKSPACE_DIR_PATH: {
+                        "bind": DOCKER_WORKSPACE_DIR_PATH,
+                        "mode": "rw",
+                    }
+                },
+                working_dir=DOCKER_WORKSPACE_DIR_PATH,
             )
 
     result = _container.exec_run(
-        ["bash", "-c", command], workdir=DOCKER_WORKSPACE_DIR, stdout=True, stderr=True
+        ["bash", "-c", command],
+        workdir=DOCKER_WORKSPACE_DIR_PATH,
+        stdout=True,
+        stderr=True,
     )
     output: str = result.output.decode("utf-8").strip()
     return output

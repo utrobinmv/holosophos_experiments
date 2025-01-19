@@ -2,14 +2,18 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
-from holosophos.files import WORKSPACE_DIR
+from holosophos.files import WORKSPACE_DIR_PATH
+from holosophos.utils import truncate_content
+
+WRITE_MAX_OUTPUT_LENGTH = 1500
+READ_MAX_OUTPUT_LENGTH = 3000
 
 # Global state for undo operations
-_file_history: Dict[str, List[List[str]]] = defaultdict(list)
+FILE_HISTORY: Dict[str, List[List[str]]] = defaultdict(list)
 
 
 def _save_file_state(path: Path, content: List[str]) -> None:
-    _file_history[str(path.resolve())].append(content.copy())
+    FILE_HISTORY[str(path.resolve())].append(content.copy())
 
 
 def _write(path: Path, file_text: str, overwrite: bool) -> str:
@@ -23,7 +27,7 @@ def _write(path: Path, file_text: str, overwrite: bool) -> str:
         lines = path.read_text().splitlines(True)
     _save_file_state(path, lines)
     path.write_text(file_text)
-    return file_text
+    return truncate_content(file_text, WRITE_MAX_OUTPUT_LENGTH)
 
 
 def _append(path: Path, new_str: str) -> str:
@@ -32,7 +36,7 @@ def _append(path: Path, new_str: str) -> str:
     _save_file_state(path, content.splitlines(True))
     new_content = "\n".join((content, new_str))
     path.write_text(new_content)
-    return new_content
+    return truncate_content(new_content, WRITE_MAX_OUTPUT_LENGTH, suffix_only=True)
 
 
 def _insert(path: Path, insert_line: int, new_str: str) -> str:
@@ -43,7 +47,9 @@ def _insert(path: Path, insert_line: int, new_str: str) -> str:
     lines.insert(insert_line, new_str if new_str.endswith("\n") else new_str + "\n")
     new_content = "".join(lines)
     path.write_text(new_content)
-    return new_content
+    return truncate_content(
+        new_content, WRITE_MAX_OUTPUT_LENGTH, target_line=insert_line
+    )
 
 
 def _str_replace(path: Path, old_str: str, new_str: str) -> str:
@@ -52,20 +58,23 @@ def _str_replace(path: Path, old_str: str, new_str: str) -> str:
     count = content.count(old_str)
     assert count != 0, "old_str not found in file"
     assert count == 1, "old_str is not unique in file"
+    target_line = content[: content.find(old_str) + len(old_str)].count("\n")
     _save_file_state(path, content.splitlines(True))
     new_content = content.replace(old_str, new_str)
     path.write_text(new_content)
-    return new_content
+    return truncate_content(
+        new_content, WRITE_MAX_OUTPUT_LENGTH, target_line=target_line
+    )
 
 
 def _undo_edit(path: Path) -> str:
     text_path = str(path.resolve())
-    assert text_path in _file_history, f"No edit history available for: {text_path}"
-    assert _file_history[text_path], f"No edit history available for: {text_path}"
-    previous_state = _file_history[text_path].pop()
+    assert text_path in FILE_HISTORY, f"No edit history available for: {text_path}"
+    assert FILE_HISTORY[text_path], f"No edit history available for: {text_path}"
+    previous_state = FILE_HISTORY[text_path].pop()
     new_content = "".join(previous_state)
     path.write_text(new_content)
-    return new_content
+    return truncate_content(new_content, WRITE_MAX_OUTPUT_LENGTH)
 
 
 def _view(
@@ -73,7 +82,6 @@ def _view(
     view_start_line: Optional[int] = None,
     view_end_line: Optional[int] = None,
     show_lines: bool = False,
-    max_output_length: int = 2048,
 ) -> str:
     assert path.exists(), f"Path does not exist: {path}"
     if not path.is_file():
@@ -106,23 +114,13 @@ def _view(
         lines = lines[view_start_line - 1 : view_end_line]
         enum_start_line = view_start_line
     output = []
-    total_length = 0
     for i, line in enumerate(lines, enum_start_line):
         prefix = f"{i:6d}\t"
         current_line = line
         if show_lines:
             current_line = prefix + current_line
-        if total_length + len(current_line) > max_output_length:
-            space_for_text = max_output_length - total_length
-            space_for_text = max(space_for_text, 0)
-            current_line = line[:space_for_text]
-            if show_lines:
-                current_line = prefix + current_line
-            output.append(current_line + " <response clipped>")
-            break
         output.append(current_line)
-        total_length += len(current_line)
-    return "".join(output)
+    return truncate_content("".join(output), READ_MAX_OUTPUT_LENGTH)
 
 
 def text_editor(
@@ -181,13 +179,11 @@ def text_editor(
     ), "Absolute path is not supported, only relative to the work directory"
     valid_commands = ("view", "write", "str_replace", "insert", "undo_edit", "append")
 
-    path_obj = WORKSPACE_DIR / path
+    path_obj = WORKSPACE_DIR_PATH / path
 
     if command == "view":
         show_lines = show_lines if show_lines is not None else False
-        return _view(
-            path_obj, view_start_line, view_end_line, show_lines, max_output_length=2048
-        )
+        return _view(path_obj, view_start_line, view_end_line, show_lines)
     if command == "write":
         assert file_text is not None, "'file_text' is required for 'write' command"
         return _write(

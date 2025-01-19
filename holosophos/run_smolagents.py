@@ -15,10 +15,10 @@ from holosophos.tools import (
 from holosophos.utils import get_prompt
 
 PROMPT1 = """
-Какая лучшая модель (не обязательно открытая) для русского языка согласно role-play бенчмарку Ильи Гусева?
-Какая у неё финальная оценка согласно этому бенчмарку?
-Сохрани точный ответ в final.txt.
-Пока не найдёшь ответ, не останавливайся.
+What is the best model for Russian in a role-play benchmark by Ilya Gusev?
+What final scores does it have?
+Save your answer to final.txt.
+Don't stop until you find the answer.
 """
 
 PROMPT2 = """
@@ -36,6 +36,13 @@ PROMPT2 = """
 Ответь на русском.
 """
 
+PROMPT3 = """
+Write an outline of a paper about benchmarks for quantized large language models.
+Relevant quantization methods are GPTQ, SPQR, AWQ.
+Start with researching relevant papers, suggest new ideas and write a full paper.
+Don't stop until you write a full coherent paper.
+"""
+
 MODEL1 = "gpt-4o-mini"
 MODEL2 = "anthropic/claude-3-5-sonnet-20241022"
 
@@ -44,11 +51,7 @@ download_tool = convert_tool_to_smolagents(arxiv_download)
 bash_tool = convert_tool_to_smolagents(bash)
 text_editor_tool = convert_tool_to_smolagents(text_editor)
 
-model = LiteLLMModel(model_id=MODEL2, temperature=0.0)
-current_defaults = list(model.__call__.__func__.__defaults__)
-current_defaults[2] = 8192
-model.__call__.__func__.__defaults__ = tuple(current_defaults)
-
+model = LiteLLMModel(model_id=MODEL1, temperature=0.0, max_tokens=8192)
 agent = CodeAgent(
     tools=[
         search_tool,
@@ -56,13 +59,14 @@ agent = CodeAgent(
         bash_tool,
         text_editor_tool,
         DocumentQATool(model),
-        # DuckDuckGoSearchTool(),
-        # VisitWebpageTool(),
+        DuckDuckGoSearchTool(),
+        VisitWebpageTool(),
     ],
     model=model,
     add_base_tools=False,
-    max_steps=30,
+    max_steps=50,
     planning_interval=3,
     system_prompt=get_prompt("system"),
+    max_print_outputs_length=10000,
 )
-agent.run(PROMPT2)
+agent.run(PROMPT1)
