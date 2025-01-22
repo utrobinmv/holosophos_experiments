@@ -34,11 +34,16 @@ Start with researching relevant papers, suggest new ideas and write a full paper
 Don't stop until you write a full coherent paper.
 """
 
+PROMPT4 = (
+    """Which paper introduced Vector Quantized Variational Autoencoders (VQ-VAE)?"""
+)
+
 MODEL1 = "gpt-4o-mini"
 MODEL2 = "anthropic/claude-3-5-sonnet-20241022"
+MODEL3 = "openrouter/deepseek/deepseek-chat"
 
 max_print_outputs_length = 10000
-model = LiteLLMModel(model_id=MODEL1, temperature=0.0, max_tokens=8192)
+model = LiteLLMModel(model_id=MODEL2, temperature=0.0, max_tokens=8192)
 agent = CodeAgent(
     tools=[text_editor_tool, bash_tool],
     managed_agents=[
@@ -52,4 +57,4 @@ agent = CodeAgent(
     system_prompt=get_prompt("system"),
     max_print_outputs_length=max_print_outputs_length,
 )
-agent.run(PROMPT1)
+agent.run(PROMPT4)

@@ -19,8 +19,8 @@ SORT_ORDER_OPTIONS = ("ascending", "descending")
 ENTRY_TEMPLATE = """==== Entry {{index}} ====
 Paper ID: {{entry["id"]}}
 Title: {{entry["title"]}}
-Authors: {{entry["authors"]}}
-Summary: {{entry["summary"]}}{% if entry["comment"] %}
+Authors: {{entry["authors"]}}{% if include_summaries %}
+Summary: {{entry["summary"]}}{% endif %}{% if entry["comment"] %}
 Comment: {{entry["comment"]}}{% endif %}
 Publication date: {{entry["published"]}}{% if entry["published"] != entry["updated"] %}
 Date of last update: {{entry["updated"]}}{% endif %}
@@ -94,6 +94,9 @@ def _compose_query(
     end_date: Optional[str] = None,
 ) -> str:
     query: str = orig_query.replace(" AND NOT ", " ANDNOT ")
+    if "-" in query:
+        query = f"({query}) OR ({query.replace('-', ' ')})"
+
     if start_date or end_date:
         if not start_date:
             start_date = "1900-01-01"
@@ -103,7 +106,6 @@ def _compose_query(
         date_filter = f"[{_convert_to_yyyymmddtttt(start_date)} TO {_convert_to_yyyymmddtttt(end_date)}]"
         query = f"({query}) AND submittedDate:{date_filter}"
 
-    query = query.replace("-", " ")
     query = query.replace(" ", "+")
     query = query.replace('"', "%22")
     query = query.replace("(", "%28")
@@ -111,7 +113,13 @@ def _compose_query(
     return query
 
 
-def _format_entries(entries: List[Dict[str, Any]], start_index: int) -> str:
+def _format_entries(
+    entries: List[Dict[str, Any]],
+    start_index: int,
+    include_summaries: bool,
+    total_results: int,
+) -> str:
+    prefix = f"Found {total_results} papers, showing limit={len(entries)} papers starting from offset={start_index}"
     final_entries = []
     for entry_num, entry in enumerate(entries):
         index = start_index + entry_num
@@ -121,9 +129,10 @@ def _format_entries(entries: List[Dict[str, Any]], start_index: int) -> str:
             template.render(
                 index=index,
                 entry=fixed_entry,
+                include_summaries=include_summaries,
             )
         )
-    return "\n".join(final_entries)
+    return prefix + "\n" + "\n".join(final_entries)
 
 
 def _get_results(url: str) -> requests.Response:
@@ -159,20 +168,22 @@ def arxiv_search(
     end_date: Optional[str] = None,
     sort_by: Optional[str] = "relevance",
     sort_order: Optional[str] = "descending",
+    include_summaries: Optional[bool] = False,
 ) -> str:
     """
     Search arXiv papers with field-specific queries.
 
     Fields that can be searched:
         ti: (title), au: (author), abs: (abstract),
-        cat: (category), id: (ID)
+        cat: (category), id: (ID without version)
 
     Operatore that can be used:
         AND, OR, ANDNOT
 
     Please always specify the fields. Search should be always field-specific.
     You can include entire phrases by enclosing the phrase in double quotes.
-    Note, that boolean operators are strict. Do not overuse AND.
+    Note, that boolean operators are strict. In most cases you need OR and not AND.
+    Note, that you can scroll search results with the "offset" parameter.
     Do not include date constraints into the query, use "start_date" and "end_date" parameters instead.
     Names of authors should be in Latin script.
     For example, search "Ilya Gusev" instead of "Илья Гусев".
@@ -194,12 +205,13 @@ def arxiv_search(
         end_date: End date in %Y-%m-%d format. None by default.
         sort_by: 3 options to sort by: relevance, lastUpdatedDate, submittedDate. relevance by default.
         sort_order: 2 sort orders: ascending, descending. descending by default.
+        include_summaries: include summaries in the result or not. False by default.
     """
 
     assert isinstance(query, str), "Error: Your search query must be a string"
     assert isinstance(offset, int), "Error: offset should be an integer"
     assert isinstance(limit, int), "Error: limit should be an integer"
-    assert 1 <= limit <= 5, "Error: limit should be between 1 and 5"
+    assert 1 <= limit <= 10, "Error: limit should be between 1 and 5"
     assert isinstance(sort_by, str), "Error: sort_by should be a string"
     assert isinstance(sort_order, str), "Error: sort_order should be a string"
     assert query.strip(), "Error: Your query should not be empty"
@@ -234,5 +246,10 @@ def arxiv_search(
     entries = feed.get("entry", [])
     if isinstance(entries, dict):
         entries = [entries]
-    formatted_entries = _format_entries(entries, start_index=start_index)
-    return f"Found {total_results} papers\nOffset: {offset}\n{formatted_entries}"
+    formatted_entries = _format_entries(
+        entries,
+        start_index=start_index,
+        total_results=total_results,
+        include_summaries=include_summaries,
+    )
+    return formatted_entries
