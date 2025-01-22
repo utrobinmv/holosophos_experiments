@@ -225,6 +225,7 @@ def arxiv_search(
     assert limit < 100, "Error: limit is too large, it should be less than 100"
     assert limit > 0, "Error: limit should be greater than 0"
     assert not _has_cyrillic(query), "Error: use only Latin script for queries"
+    assert include_summaries is not None, "Error: include_summaries must be bool"
 
     fixed_query: str = _compose_query(query, start_date, end_date)
     url = URL_TEMPLATE.format(
