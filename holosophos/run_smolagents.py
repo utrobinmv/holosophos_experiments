@@ -34,10 +34,6 @@ Start with researching relevant papers, suggest new ideas and write a full paper
 Don't stop until you write a full coherent paper.
 """
 
-PROMPT4 = (
-    """Which paper introduced Vector Quantized Variational Autoencoders (VQ-VAE)?"""
-)
-
 MODEL1 = "gpt-4o-mini"
 MODEL2 = "anthropic/claude-3-5-sonnet-20241022"
 MODEL3 = "openrouter/deepseek/deepseek-chat"
@@ -57,4 +53,4 @@ agent = CodeAgent(
     system_prompt=get_prompt("system"),
     max_print_outputs_length=max_print_outputs_length,
 )
-agent.run(PROMPT4)
+agent.run(PROMPT1)

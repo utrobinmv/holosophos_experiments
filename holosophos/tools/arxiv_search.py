@@ -2,6 +2,7 @@
 # https://github.com/jonatasgrosman/findpapers/blob/master/findpapers/searchers/arxiv_searcher.py
 # https://info.arxiv.org/help/api/user-manual.html
 
+import json
 import re
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, date
@@ -10,21 +11,11 @@ from urllib3.util.retry import Retry
 import requests
 from requests.adapters import HTTPAdapter
 import xmltodict
-from jinja2 import Template
 
 BASE_URL = "http://export.arxiv.org"
 URL_TEMPLATE = "{base_url}/api/query?search_query={query}&start={start}&sortBy={sort_by}&sortOrder={sort_order}&max_results={limit}"
 SORT_BY_OPTIONS = ("relevance", "lastUpdatedDate", "submittedDate")
 SORT_ORDER_OPTIONS = ("ascending", "descending")
-ENTRY_TEMPLATE = """==== Entry {{index}} ====
-Paper ID: {{entry["id"]}}
-Title: {{entry["title"]}}
-Authors: {{entry["authors"]}}{% if include_summaries %}
-Summary: {{entry["summary"]}}{% endif %}{% if entry["comment"] %}
-Comment: {{entry["comment"]}}{% endif %}
-Publication date: {{entry["published"]}}{% if entry["published"] != entry["updated"] %}
-Date of last update: {{entry["updated"]}}{% endif %}
-Categories: {{entry["categories"]}}"""
 
 
 def _format_id(url: str) -> str:
@@ -44,7 +35,7 @@ def _format_authors(authors: Union[List[Dict[str, str]], Dict[str, str]]) -> str
     names = [author["name"] for author in authors]
     result = ", ".join(names[:3])
     if len(names) > 3:
-        result += " et al."
+        result += f", and {len(names) - 3} more authors"
     return result
 
 
@@ -119,20 +110,22 @@ def _format_entries(
     include_summaries: bool,
     total_results: int,
 ) -> str:
-    prefix = f"Found {total_results} papers, showing limit={len(entries)} papers starting from offset={start_index}"
-    final_entries = []
+    clean_entries: List[Dict[str, Any]] = []
     for entry_num, entry in enumerate(entries):
-        index = start_index + entry_num
-        template = Template(ENTRY_TEMPLATE)
-        fixed_entry = _clean_entry(entry)
-        final_entries.append(
-            template.render(
-                index=index,
-                entry=fixed_entry,
-                include_summaries=include_summaries,
-            )
-        )
-    return prefix + "\n" + "\n".join(final_entries)
+        clean_entry = _clean_entry(entry)
+        if not include_summaries:
+            clean_entry.pop("summary")
+        clean_entry["index"] = start_index + entry_num
+        clean_entries.append(clean_entry)
+    return json.dumps(
+        {
+            "total_count": total_results,
+            "returned_count": len(entries),
+            "offset": start_index,
+            "results": clean_entries,
+        },
+        ensure_ascii=False,
+    )
 
 
 def _get_results(url: str) -> requests.Response:
@@ -194,8 +187,11 @@ def arxiv_search(
         au:vaswani AND ti:"attention is all"
         (au:vaswani OR au:"del maestro") ANDNOT ti:attention
 
-    Returns a text containing papers' metadata including "Paper ID", "Title", "Authors",
-    "Summary", "Comment", "Publication date", "Date of last update", "Categories"
+    Return a JSON serialized to a string. The structure is:
+    {"total_count": ..., "returned_count": ..., "offset": ..., "results": [...]}
+    Every item in the "results" has the following fields:
+    ("index", "id", "title", "authors", "summary", "published", "updated", "categories", "comment")
+    You can use json.loads to deserialize the result and get specific fields.
 
     Args:
         query: The search query, required.
@@ -247,7 +243,7 @@ def arxiv_search(
     entries = feed.get("entry", [])
     if isinstance(entries, dict):
         entries = [entries]
-    formatted_entries = _format_entries(
+    formatted_entries: str = _format_entries(
         entries,
         start_index=start_index,
         total_results=total_results,

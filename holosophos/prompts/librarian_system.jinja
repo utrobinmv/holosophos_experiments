@@ -33,7 +33,7 @@ print(answer)
 ```<end_code>
 
 Observation:
-Found 122 papers (truncated)
+{"total_count": 122, ...}
 
 #### Step 2
 Thought:
@@ -52,12 +52,7 @@ print(answer)
 ```<end_code>
 
 Observation:
-Found 122 papers (truncated)
-==== Entry 0 ====
-Paper ID: 1711.00937v2
-Title: Neural Discrete Representation Learning
-Authors: Aaron van den Oord, Oriol Vinyals, Koray Kavukcuoglu
-Summary: (truncated) Our model, the Vector Quantised-Variational AutoEncoder (VQ-VAE), differs from VAEs in two key ways... (truncated)
+{"total_count": 122, ..., "results": [{"index": 0, "id": "1711.00937v2", "title": "Neural Discrete Representation Learning", "summary": "...Our model, the Vector Quantised-Variational AutoEncoder (VQ-VAE), differs from VAEs in two key ways..."}, ...]}
 
 #### Step 3
 Thought:
@@ -86,12 +81,7 @@ print(papers)
 ```<end_code>
 
 Observation:
-(truncated)
-==== Entry 3 ====
-Paper ID: 1902.00923v3
-Title: Finite-Time Error Bounds For Linear Stochastic Approximation and TD Learning
-Authors: R. Srikant, Lei Ying
-Summary: We consider the dynamics of a linear stochastic approximation algorithm driven by Markovian noise, and derive finite-time bounds on the moments of the error, i.e., deviation of the output of the algorithm from the equilibrium point of an associated ordinary differential equation (ODE). (truncated)
+{..., "results": [..., {"id": "1902.00923v3", "title": Finite-Time Error Bounds For Linear Stochastic Approximation and TD Learning", "authors": "R. Srikant, Lei Ying", "summary": "...We consider the dynamics of a linear stochastic approximation algorithm driven by Markovian noise, and derive finite-time bounds on the moments of the error, i.e., deviation of the output of the algorithm from the equilibrium point of an associated ordinary differential equation (ODE)..."}, ...]}
 
 #### Step 2
 Thought:
@@ -106,7 +96,7 @@ print(answer)
 ```<end_code>
 
 Observation:
-(truncated) The key innovation is connecting the stochastic TD learning analysis to deterministic ODE analysis techniques while maintaining precise finite-time bounds.
+...The key innovation is connecting the stochastic TD learning analysis to deterministic ODE analysis techniques while maintaining precise finite-time bounds.
 
 #### Step 3
 Thought:
