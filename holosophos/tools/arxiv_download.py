@@ -220,7 +220,12 @@ def _parse_html(paper_id: str) -> Dict[str, Any]:
     citations = _extract_citations(biblist_tag)
     toc = _generate_toc(article)
     sections = _build_by_toc(toc, article, url)
-    return {"toc": toc.to_str(), "sections": sections, "citations": citations}
+    return {
+        "toc": toc.to_str(),
+        "sections": sections,
+        "citations": citations,
+        "original_format": "html",
+    }
 
 
 def _parse_abs(paper_id: str) -> Dict[str, str]:
@@ -238,10 +243,7 @@ def _parse_abs(paper_id: str) -> Dict[str, str]:
     assert abstract_tag and isinstance(abstract_tag, bs4.element.Tag)
     abstract = abstract_tag.get_text().strip()
     abstract = abstract.replace("Abstract:", "")
-    return {
-        "title": title,
-        "abstract": abstract,
-    }
+    return {"title": title, "abstract": abstract}
 
 
 def _parse_pdf(paper_id: str) -> Dict[str, Any]:
@@ -259,17 +261,23 @@ def _parse_pdf(paper_id: str) -> Dict[str, Any]:
     # Why not Marker? Because it is too heavy.
     reader = PdfReader(str(pdf_path.resolve()))
 
-    full_text = ""
+    pages = []
     for page_number, page in enumerate(reader.pages, start=1):
         try:
             text = page.extract_text()
+            prefix = f"## Page {page_number}\n\n"
+            pages.append(prefix + text)
         except Exception:
             continue
-        full_text += f"==== Page {page_number} ====\n{text}\n"
-    return {"toc": "Full text only", "sections": [full_text], "citations": None}
+    return {
+        "toc": "\n".join([f"Page {page_number}" for page_number in range(1, len(pages) + 1)]),
+        "sections": pages,
+        "citations": [],
+        "original_format": "pdf",
+    }
 
 
-def arxiv_download(paper_id: str) -> str:
+def arxiv_download(paper_id: str, include_citations: Optional[bool] = False) -> str:
     """
     Downloads a paper from Arxiv and converts it to text.
 
@@ -285,6 +293,7 @@ def arxiv_download(paper_id: str) -> str:
 
     Args:
         paper_id: ID of the paper on Arxiv. For instance: 2409.06820v1
+        include_citations: include "citations" in the result or not. False by default.
     """
 
     abs_meta = _parse_abs(paper_id)
@@ -292,5 +301,7 @@ def arxiv_download(paper_id: str) -> str:
         content = _parse_html(paper_id)
     except requests.exceptions.HTTPError:
         content = _parse_pdf(paper_id)
+    if not include_citations and "citations" in content:
+        content.pop("citations")
 
     return json.dumps({**abs_meta, **content}, ensure_ascii=False)
