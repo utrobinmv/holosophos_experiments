@@ -123,7 +123,7 @@ def test_arxiv_search_complex_query_vq_vae() -> None:
         limit=1,
         sort_by="submittedDate",
         sort_order="ascending",
-        include_summaries=True,
+        include_abstracts=True,
     )
     assert "1711.00937" in result
 
@@ -134,6 +134,6 @@ def test_arxiv_search_point_e() -> None:
         limit=1,
         sort_by="submittedDate",
         sort_order="ascending",
-        include_summaries=True,
+        include_abstracts=True,
     )
     assert "2212.08751" in result

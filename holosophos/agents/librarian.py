@@ -22,7 +22,7 @@ def get_librarian_agent(
     model: Model,
     max_steps: int = 50,
     planning_interval: Optional[int] = None,
-    max_print_outputs_length: int = 10000,
+    max_print_outputs_length: int = 20000,
 ) -> ManagedAgent:
     agent = CodeAgent(
         tools=[
@@ -39,6 +39,7 @@ def get_librarian_agent(
         planning_interval=planning_interval,
         system_prompt=get_prompt("librarian_system"),
         max_print_outputs_length=max_print_outputs_length,
+        additional_authorized_imports=["json"],
     )
 
     managed_agent = ManagedAgent(

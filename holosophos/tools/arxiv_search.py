@@ -53,7 +53,7 @@ def _clean_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
         "id": entry["id"].split("/")[-1],
         "title": _format_text_field(entry["title"]),
         "authors": _format_authors(entry["author"]),
-        "summary": _format_text_field(entry["summary"]),
+        "abstract": _format_text_field(entry["summary"]),
         "published": _format_date(entry["published"]),
         "updated": _format_date(entry["updated"]),
         "categories": _format_categories(entry.get("category", {})),
@@ -101,14 +101,14 @@ def _compose_query(
 def _format_entries(
     entries: List[Dict[str, Any]],
     start_index: int,
-    include_summaries: bool,
+    include_abstracts: bool,
     total_results: int,
 ) -> str:
     clean_entries: List[Dict[str, Any]] = []
     for entry_num, entry in enumerate(entries):
         clean_entry = _clean_entry(entry)
-        if not include_summaries:
-            clean_entry.pop("summary")
+        if not include_abstracts:
+            clean_entry.pop("abstract")
         clean_entry["index"] = start_index + entry_num
         clean_entries.append(clean_entry)
     return json.dumps(
@@ -150,12 +150,12 @@ def _get_results(url: str) -> requests.Response:
 def arxiv_search(
     query: str,
     offset: Optional[int] = 0,
-    limit: Optional[int] = 3,
+    limit: Optional[int] = 5,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     sort_by: Optional[str] = "relevance",
     sort_order: Optional[str] = "descending",
-    include_summaries: Optional[bool] = False,
+    include_abstracts: Optional[bool] = False,
 ) -> str:
     """
     Search arXiv papers with field-specific queries.
@@ -170,7 +170,7 @@ def arxiv_search(
     Please always specify the fields. Search should be always field-specific.
     You can include entire phrases by enclosing the phrase in double quotes.
     Note, that boolean operators are strict. In most cases you need OR and not AND.
-    Note, that you can scroll search results with the "offset" parameter.
+    Note, that you can scroll all search results with the "offset" parameter.
     Do not include date constraints into the query, use "start_date" and "end_date" parameters instead.
     Names of authors should be in Latin script.
     For example, search "Ilya Gusev" instead of "Илья Гусев".
@@ -184,18 +184,18 @@ def arxiv_search(
     Return a JSON serialized to a string. The structure is:
     {"total_count": ..., "returned_count": ..., "offset": ..., "results": [...]}
     Every item in the "results" has the following fields:
-    ("index", "id", "title", "authors", "summary", "published", "updated", "categories", "comment")
+    ("index", "id", "title", "authors", "abstract", "published", "updated", "categories", "comment")
     You can use json.loads to deserialize the result and get specific fields.
 
     Args:
         query: The search query, required.
         offset: The offset in search results. If it is 10, first 10 items will be skipped. 0 by default.
-        limit: The maximum number of items that will be returned. limit=3 by default, limit=5 is the maximum.
+        limit: The maximum number of items that will be returned. limit=5 by default, limit=10 is the maximum.
         start_date: Start date in %Y-%m-%d format. None by default.
         end_date: End date in %Y-%m-%d format. None by default.
         sort_by: 3 options to sort by: relevance, lastUpdatedDate, submittedDate. relevance by default.
         sort_order: 2 sort orders: ascending, descending. descending by default.
-        include_summaries: include summaries in the result or not. False by default.
+        include_abstracts: include abstracts in the result or not. False by default.
     """
 
     assert isinstance(query, str), "Error: Your search query must be a string"
@@ -203,7 +203,6 @@ def arxiv_search(
     assert isinstance(limit, int), "Error: limit should be an integer"
     assert isinstance(sort_by, str), "Error: sort_by should be a string"
     assert isinstance(sort_order, str), "Error: sort_order should be a string"
-    assert 1 <= limit <= 10, "Error: limit should be between 1 and 5"
     assert query.strip(), "Error: Your query should not be empty"
     assert (
         sort_by in SORT_BY_OPTIONS
@@ -215,7 +214,7 @@ def arxiv_search(
     assert limit < 100, "Error: limit is too large, it should be less than 100"
     assert limit > 0, "Error: limit should be greater than 0"
     assert not _has_cyrillic(query), "Error: use only Latin script for queries"
-    assert include_summaries is not None, "Error: include_summaries must be bool"
+    assert include_abstracts is not None, "Error: include_abstracts must be bool"
 
     fixed_query: str = _compose_query(query, start_date, end_date)
     url = URL_TEMPLATE.format(
@@ -241,6 +240,6 @@ def arxiv_search(
         entries,
         start_index=start_index,
         total_results=total_results,
-        include_summaries=include_summaries,
+        include_abstracts=include_abstracts,
     )
     return formatted_entries

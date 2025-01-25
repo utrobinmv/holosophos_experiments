@@ -84,6 +84,8 @@ class ArxivHTMLConverter(MarkdownConverter):  # type: ignore
     def convert_span(
         self, el: bs4.element.Tag, text: str, convert_as_inline: bool = False
     ) -> str:
+        if "class" not in el:
+            return text
         if "ltx_tag_item" in el["class"]:
             return ""
         if "ltx_note_outer" in el["class"]:
@@ -215,9 +217,12 @@ def _parse_html(paper_id: str) -> Dict[str, Any]:
     soup = bs4.BeautifulSoup(content, features="lxml")
     article = soup.article
     assert article and isinstance(article, bs4.element.Tag)
+
+    citations = []
     biblist_tag = article.find(class_="ltx_biblist")
-    assert biblist_tag and isinstance(biblist_tag, bs4.element.Tag)
-    citations = _extract_citations(biblist_tag)
+    if biblist_tag and isinstance(biblist_tag, bs4.element.Tag):
+        citations = _extract_citations(biblist_tag)
+
     toc = _generate_toc(article)
     sections = _build_by_toc(toc, article, url)
     return {
@@ -270,7 +275,9 @@ def _parse_pdf(paper_id: str) -> Dict[str, Any]:
         except Exception:
             continue
     return {
-        "toc": "\n".join([f"Page {page_number}" for page_number in range(1, len(pages) + 1)]),
+        "toc": "\n".join(
+            [f"Page {page_number}" for page_number in range(1, len(pages) + 1)]
+        ),
         "sections": pages,
         "citations": [],
         "original_format": "pdf",

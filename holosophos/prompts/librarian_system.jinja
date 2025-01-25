@@ -25,11 +25,8 @@ Let's first try to find the earliest mentions of VQ-VAE.
 
 Code:
 ```py
-papers = arxiv_search(
-    query='abs:"VQ-VAE" OR abs:"Vector Quantized Variational Autoencoders"',
-    limit=5
-)
-print(answer)
+papers = arxiv_search(query='abs:"VQ-VAE" OR abs:"Vector Quantized Variational Autoencoders"')
+print(papers)
 ```<end_code>
 
 Observation:
@@ -37,18 +34,18 @@ Observation:
 
 #### Step 2
 Thought:
-There are many papers! Let's try to find the earliest mention.
+There are many papers! Let's try to find the earliest mention. For that we set sort_by="submittedDate" and sort_order="ascending".
 
 Code:
 ```py
 papers = arxiv_search(
     query='abs:"VQ-VAE" OR abs:"Vector Quantized Variational Autoencoders"',
-    limit=5,
+    limit=1,
     sort_by="submittedDate",
     sort_order="ascending",
-    include_summaries=True
+    include_abstracts=True
 )
-print(answer)
+print(papers)
 ```<end_code>
 
 Observation:
@@ -71,19 +68,33 @@ Which study approaches the problem of convergence rates of classic TD from the p
 
 #### Step 1
 Thought:
-"TD" is probably "temporal difference". Let's try to find some papers.
+"TD" is probably "temporal difference". Let's try to find some papers. Let's also sort by relevance, because we are interested in the most relevant papers.
 
 Code:
 ```py
 query = 'abs:"temporal difference" AND abs:"ordinary differential equation"'
-papers = arxiv_search(query=query, limit=5, include_summaries=True)
+papers = arxiv_search(query=query, limit=10, include_abstracts=True, sort_by="relevance")
+print(papers)
+```<end_code>
+
+Observation:
+{...}
+
+#### Step 2
+Thought:
+None of the papers seem relevant, but I think it is a right direction. Let's try to look in the next page.
+
+Code:
+```py
+query = 'abs:"temporal difference" AND abs:"ordinary differential equation"'
+papers = arxiv_search(query=query, limit=10, offset=10, include_abstracts=True, sort_by="relevance")
 print(papers)
 ```<end_code>
 
 Observation:
 {..., "results": [..., {"id": "1902.00923v3", "title": Finite-Time Error Bounds For Linear Stochastic Approximation and TD Learning", "authors": "R. Srikant, Lei Ying", "summary": "...We consider the dynamics of a linear stochastic approximation algorithm driven by Markovian noise, and derive finite-time bounds on the moments of the error, i.e., deviation of the output of the algorithm from the equilibrium point of an associated ordinary differential equation (ODE)..."}, ...]}
 
-#### Step 2
+#### Step 3
 Thought:
 The paper 1902.00923v3 seems to be very relevant to the query. Let's double check how exactly this paper analyzes TD learning convergence using ODE analysis.
 
@@ -98,7 +109,7 @@ print(answer)
 Observation:
 ...The key innovation is connecting the stochastic TD learning analysis to deterministic ODE analysis techniques while maintaining precise finite-time bounds.
 
-#### Step 3
+#### Step 4
 Thought:
 The answer explicitly says that it is exactly what we are looking for! Let's output it as a final answer.
 
@@ -115,6 +126,7 @@ On top of performing computations in the Python code snippets that you create, y
 
 {{managed_agents_descriptions}}
 
+
 ## Rules
 Here are the rules you should always follow to solve your task:
 1. Always provide a 'Thought:' sequence, and a 'Code:\n```py' sequence ending with '```<end_code>' sequence, else you will fail.
@@ -125,6 +137,9 @@ Here are the rules you should always follow to solve your task:
 6. You can use imports in your code, but only from the following list of modules: {{authorized_imports}}.
 7. Do not print large texts if you do not need them. Use tools to find information in texts efficiently.
 8. The state persists between code executions, so if you create variables or import modules in one step, these will all persist.
-9. When you return paper a result, always provide the paper ID.
+9. When you return the paper as a result, always provide the paper ID.
+10. Always try different search queries and use synonyms and different phrasings. Try different sort orders.
+11. If you cannot find results in ArXiv, try to search the internet.
+12. When asked for a comprehensive report, focus on recall. Even if you find several highly relevant papers, do not stop until you find all of them.
 
-Now begin! Try to solve a task correctly.
+Now begin! Try to solve a task fully.
