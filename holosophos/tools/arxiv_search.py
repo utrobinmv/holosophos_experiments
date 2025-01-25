@@ -9,7 +9,6 @@ from datetime import datetime, date
 from urllib3.util.retry import Retry
 
 import requests
-from requests.adapters import HTTPAdapter
 import xmltodict
 
 BASE_URL = "http://export.arxiv.org"
@@ -18,13 +17,8 @@ SORT_BY_OPTIONS = ("relevance", "lastUpdatedDate", "submittedDate")
 SORT_ORDER_OPTIONS = ("ascending", "descending")
 
 
-def _format_id(url: str) -> str:
-    return url.split("/")[-1]
-
-
 def _format_text_field(text: str) -> str:
-    text = " ".join([line.strip() for line in text.split() if line.strip()])
-    return text
+    return " ".join([line.strip() for line in text.split() if line.strip()])
 
 
 def _format_authors(authors: Union[List[Dict[str, str]], Dict[str, str]]) -> str:
@@ -56,7 +50,7 @@ def _format_date(date: str) -> str:
 
 def _clean_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
     return {
-        "id": _format_id(entry["id"]),
+        "id": entry["id"].split("/")[-1],
         "title": _format_text_field(entry["title"]),
         "authors": _format_authors(entry["author"]),
         "summary": _format_text_field(entry["summary"]),
@@ -131,13 +125,13 @@ def _format_entries(
 def _get_results(url: str) -> requests.Response:
     retry_strategy = Retry(
         total=3,
-        backoff_factor=1,
+        backoff_factor=3,
         status_forcelist=[500, 502, 503, 504],
         allowed_methods=["GET"],
     )
 
     session = requests.Session()
-    adapter = HTTPAdapter(max_retries=retry_strategy)
+    adapter = requests.adapters.HTTPAdapter(max_retries=retry_strategy)
     session.mount("http://", adapter)
 
     try:
@@ -207,9 +201,9 @@ def arxiv_search(
     assert isinstance(query, str), "Error: Your search query must be a string"
     assert isinstance(offset, int), "Error: offset should be an integer"
     assert isinstance(limit, int), "Error: limit should be an integer"
-    assert 1 <= limit <= 10, "Error: limit should be between 1 and 5"
     assert isinstance(sort_by, str), "Error: sort_by should be a string"
     assert isinstance(sort_order, str), "Error: sort_order should be a string"
+    assert 1 <= limit <= 10, "Error: limit should be between 1 and 5"
     assert query.strip(), "Error: Your query should not be empty"
     assert (
         sort_by in SORT_BY_OPTIONS

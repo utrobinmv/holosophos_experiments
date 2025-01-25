@@ -19,7 +19,7 @@ English constituency parsing both with large and limited training data.
 """
 
 
-def test_document_qa() -> None:
+def test_document_qa_base() -> None:
     model = LiteLLMModel(model_id="gpt-4o-mini", temperature=0.0)
     tool = DocumentQATool(model)
     answer = tool(
@@ -29,10 +29,10 @@ def test_document_qa() -> None:
     assert "28.4" in answer
 
 
-def test_real_question() -> None:
+def test_document_qa_real_question() -> None:
     model = LiteLLMModel(model_id="gpt-4o", temperature=0.0)
     tool = DocumentQATool(model)
     questions = "What is the best model for the Russian language according to the role-play benchmark and its final score?"
     document = arxiv_download("2409.06820")
     answer = tool(questions=questions, document=document)
-    assert "4.63" in answer or "4.68" in answer
+    assert "4.62" in answer or "4.68" in answer

@@ -1,8 +1,12 @@
 # Based on
 # https://github.com/SamuelSchmidgall/AgentLaboratory/blob/main/tools.py
+# https://github.com/bytedance/pasa/blob/main/utils.py
 
+import re
+import json
 from pathlib import Path
-from typing import Any
+from typing import Any, List, Optional, Dict
+from dataclasses import dataclass, field
 
 import requests
 import bs4
@@ -10,6 +14,47 @@ from markdownify import MarkdownConverter  # type: ignore
 from pypdf import PdfReader
 
 from holosophos.files import WORKSPACE_DIR_PATH
+
+HTML_URL = "https://arxiv.org/html/{paper_id}"
+ABS_URL = "https://arxiv.org/abs/{paper_id}"
+PDF_URL = "https://arxiv.org/pdf/{paper_id}"
+SECTION_STOP_WORDS = (
+    "references",
+    "acknowledgments",
+    "about this document",
+    "appendix",
+)
+
+
+@dataclass
+class TOCEntry:
+    level: int
+    title: str
+    html_id: Optional[str] = None
+    subsections: List["TOCEntry"] = field(default_factory=list)
+
+    def linearize(self) -> List["TOCEntry"]:
+        entries = [self]
+        for subsection in self.subsections:
+            entries.extend(subsection.linearize())
+        return entries
+
+    def is_excluded(self) -> bool:
+        return any(ss in self.title.lower() for ss in SECTION_STOP_WORDS)
+
+    def to_str(self) -> str:
+        final_items = []
+        output_index = 0
+        for entry in self.linearize():
+            if entry.level <= 1:
+                continue
+            prefix = "  " * (entry.level - 2)
+            suffix = ""
+            if entry.level == 2 and not entry.is_excluded():
+                suffix = f" (index in 'sections': {output_index})"
+                output_index += 1
+            final_items.append(prefix + entry.title + suffix)
+        return "\n".join(final_items)
 
 
 class ArxivHTMLConverter(MarkdownConverter):  # type: ignore
@@ -21,18 +66,17 @@ class ArxivHTMLConverter(MarkdownConverter):  # type: ignore
     def convert_cite(
         self, el: bs4.element.Tag, text: str, convert_as_inline: bool = False
     ) -> str:
-        parts = text.split(";")
-        new_parts = []
-        for part in parts:
-            part = part.strip()
-            if not part:
-                continue
-            new_part = part
-            year = part.split()[-1]
+        citations = text.split(";")
+        citations = [c.strip() for c in citations if c.strip()]
+        fixed_citations = []
+        for citation in citations:
+            fixed_citation = citation
+            parts = citation.split()
+            year = parts[-1]
             if len(year) > 4 and year[0] == "(" and year[-1] == ")":
-                new_part = f'{" ".join(part.split()[:-1])}, {year[1:-1]}'
-            new_parts.append(new_part)
-        return f'({"; ".join(new_parts)})'
+                fixed_citation = f'{" ".join(parts[:-1])}, {year[1:-1]}'
+            fixed_citations.append(fixed_citation)
+        return f'({"; ".join(fixed_citations)})'
 
     def convert_sup(self, *args: Any, **kwargs: Any) -> str:
         return ""
@@ -66,19 +110,31 @@ class ArxivHTMLConverter(MarkdownConverter):  # type: ignore
         return text
 
 
-def _get_md_from_html(paper_id: str) -> str:
-    url = f"https://arxiv.org/html/{paper_id}"
-    response = requests.get(url)
-    response.raise_for_status()
-    content = response.text
+def _generate_toc(soup: bs4.element.Tag) -> TOCEntry:
+    stack = [TOCEntry(level=0, title="ROOT", html_id=None)]
+    heading_tags = {"h1": 1, "h2": 2, "h3": 3, "h4": 4, "h5": 5}
+    for tag in soup.find_all(heading_tags.keys()):
+        level = heading_tags[tag.name]
+        while stack[-1].level >= level:
+            stack.pop()
+        parent_entry = stack[-1]
+        section = tag.find_parent("section", id=True)
+        if not section:
+            continue
+        section_id = section.get("id")
+        assert section_id is not None
+        title = tag.get_text().strip()
+        new_entry = TOCEntry(level=level, title=title, html_id=section_id)
+        parent_entry.subsections.append(new_entry)
+        stack.append(new_entry)
+    return stack[0]
 
-    soup = bs4.BeautifulSoup(content, features="lxml")
-    article = soup.article
+
+def _convert_soup_to_md(soup: bs4.element.Tag, url: str) -> str:
     converter = ArxivHTMLConverter(
-        base_url=url, strip=["section", "div", "a"], heading_style="ATX"
+        base_url=url, strip=["div", "a"], heading_style="ATX"
     )
-
-    md_content: str = converter.convert_soup(article)
+    md_content: str = converter.convert_soup(soup)
     md_content = md_content.replace("\xa0", " ")
     md_content = "\n".join([line.strip() for line in md_content.split("\n")])
     lines = [line.strip() for line in md_content.split("\n\n") if line.strip()]
@@ -86,8 +142,110 @@ def _get_md_from_html(paper_id: str) -> str:
     return md_content
 
 
-def _get_text_from_pdf(paper_id: str) -> str:
-    url = f"https://arxiv.org/pdf/{paper_id}"
+def _build_by_toc(toc: TOCEntry, soup: bs4.element.Tag, url: str) -> List[str]:
+    final_sections = []
+    for toc_entry in toc.linearize():
+        if toc_entry.level == 2 and not toc_entry.is_excluded():
+            section = soup.find(id=toc_entry.html_id)
+            assert isinstance(section, bs4.element.Tag)
+            text = _convert_soup_to_md(section, url)
+            final_sections.append(text)
+    return final_sections
+
+
+def _format_authors(authors: str) -> str:
+    if not authors:
+        return ""
+    names = authors.split(",")
+    names = [n.strip() for n in names if n.strip()]
+    result = ", ".join(names[:3])
+    if len(names) > 3:
+        result += f", and {len(names) - 3} more authors"
+    return result
+
+
+def _parse_citation_metadata(metas: List[str]) -> Dict[str, Any]:
+    metas = [item.replace("\n", " ") for item in metas]
+    meta_string = " ".join(metas)
+    authors, title, journal, year = "", "", "", None
+    if len(metas) == 3:
+        authors, title, journal = metas
+    else:
+        meta_string = re.sub(r"\.\s\d{4}[a-z]?\.", ".", meta_string)
+        match = re.match(r"^(.*?\.\s)(.*?)(\.\s.*|$)", meta_string, re.DOTALL)
+        if match:
+            authors = match.group(1).strip() if match.group(1) else ""
+            title = match.group(2).strip() if match.group(2) else ""
+            journal = match.group(3).strip() if match.group(3) else ""
+            if journal.startswith(". "):
+                journal = journal[2:]
+
+    if authors:
+        parts = authors.strip(".").split(".")
+        if parts and parts[-1].strip().isdigit():
+            year = int(parts[-1].strip())
+            authors = ".".join(parts[:-1])
+        authors = _format_authors(authors)
+
+    result = {
+        "authors": authors,
+        "year": year,
+        "title": title,
+        "journal": journal,
+    }
+    if not authors or not title:
+        result["meta"] = meta_string
+    return result
+
+
+def _extract_citations(soup_biblist: bs4.element.Tag) -> List[Dict[str, Any]]:
+    extracted = []
+    for li in soup_biblist.find_all("li", recursive=False):
+        metas = [x.text.strip() for x in li.find_all("span", class_="ltx_bibblock")]
+        extracted.append(_parse_citation_metadata(metas))
+    return extracted
+
+
+def _parse_html(paper_id: str) -> Dict[str, Any]:
+    url = HTML_URL.format(paper_id=paper_id)
+    response = requests.get(url)
+    response.raise_for_status()
+    content = response.text
+
+    soup = bs4.BeautifulSoup(content, features="lxml")
+    article = soup.article
+    assert article and isinstance(article, bs4.element.Tag)
+    biblist_tag = article.find(class_="ltx_biblist")
+    assert biblist_tag and isinstance(biblist_tag, bs4.element.Tag)
+    citations = _extract_citations(biblist_tag)
+    toc = _generate_toc(article)
+    sections = _build_by_toc(toc, article, url)
+    return {"toc": toc.to_str(), "sections": sections, "citations": citations}
+
+
+def _parse_abs(paper_id: str) -> Dict[str, str]:
+    url = ABS_URL.format(paper_id=paper_id)
+    response = requests.get(url)
+    response.raise_for_status()
+    content = response.text
+
+    soup = bs4.BeautifulSoup(content, features="lxml")
+    title_tag = soup.find(class_="title")
+    assert title_tag and isinstance(title_tag, bs4.element.Tag)
+    title = title_tag.get_text().strip()
+    title = title.replace("Title:", "")
+    abstract_tag = soup.find(class_="abstract")
+    assert abstract_tag and isinstance(abstract_tag, bs4.element.Tag)
+    abstract = abstract_tag.get_text().strip()
+    abstract = abstract.replace("Abstract:", "")
+    return {
+        "title": title,
+        "abstract": abstract,
+    }
+
+
+def _parse_pdf(paper_id: str) -> Dict[str, Any]:
+    url = PDF_URL.format(paper_id=paper_id)
     pdf_path: Path = WORKSPACE_DIR_PATH / (paper_id + ".pdf")
     if not pdf_path.exists():
         response = requests.get(url)
@@ -108,25 +266,31 @@ def _get_text_from_pdf(paper_id: str) -> str:
         except Exception:
             continue
         full_text += f"==== Page {page_number} ====\n{text}\n"
-    return full_text
+    return {"toc": "Full text only", "sections": [full_text], "citations": None}
 
 
 def arxiv_download(paper_id: str) -> str:
     """
-    Downloads a paper from Arxiv and converts it to Markdown.
+    Downloads a paper from Arxiv and converts it to text.
 
-    Returns a Markdown version of the paper.
-    Also saves it to the work directory as {paper_id}.md.
+    Returns a JSON with a following structure:
+    {
+        "title": "...",
+        "abstract": "...",
+        "toc": "...",
+        "sections": ["...", ...],
+        "citations": [...]
+    }
+    The "toc" key contains Table of Contents, that sometimes has indexing for sections.
 
     Args:
         paper_id: ID of the paper on Arxiv. For instance: 2409.06820v1
     """
 
+    abs_meta = _parse_abs(paper_id)
     try:
-        content = _get_md_from_html(paper_id)
+        content = _parse_html(paper_id)
     except requests.exceptions.HTTPError:
-        content = _get_text_from_pdf(paper_id)
+        content = _parse_pdf(paper_id)
 
-    md_output_filename = WORKSPACE_DIR_PATH / f"{paper_id}.md"
-    md_output_filename.write_text(content)
-    return content
+    return json.dumps({**abs_meta, **content}, ensure_ascii=False)
