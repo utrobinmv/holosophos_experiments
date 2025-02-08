@@ -5,6 +5,7 @@ from holosophos.tools import text_editor_tool, bash_tool
 from holosophos.agents import get_librarian_agent
 from holosophos.utils import get_prompt
 
+
 PROMPT1 = """
 What is the best model for Russian in a role-play benchmark by Ilya Gusev?
 What final scores does it have?
@@ -34,23 +35,47 @@ Start with researching relevant papers, suggest new ideas and write a full paper
 Don't stop until you write a full coherent paper.
 """
 
+
+PROMPT4 = """
+Desribe what happened in the area of role-playing LLMs.
+Between August 2024 and current date (January 2025).
+Compose a comprehensive report and save into "report.md"
+"""
+
+
 MODEL1 = "gpt-4o-mini"
 MODEL2 = "anthropic/claude-3-5-sonnet-20241022"
 MODEL3 = "openrouter/deepseek/deepseek-chat"
 
-max_print_outputs_length = 10000
-model = LiteLLMModel(model_id=MODEL2, temperature=0.0, max_tokens=8192)
-agent = CodeAgent(
-    tools=[text_editor_tool, bash_tool],
-    managed_agents=[
-        get_librarian_agent(model, max_print_outputs_length=max_print_outputs_length)
-    ],
-    model=model,
-    add_base_tools=False,
-    max_steps=50,
-    planning_interval=3,
-    verbosity_level=2,
-    system_prompt=get_prompt("system"),
-    max_print_outputs_length=max_print_outputs_length,
-)
-agent.run(PROMPT1)
+
+def run_main_agent(
+    query: str,
+    model_name: str = "gpt-4o-mini",
+    max_print_outputs_length: int = 10000,
+    verbosity_level: int = 2,
+    planning_interval: int = 3,
+    max_steps: int = 50,
+):
+    model = LiteLLMModel(
+        model_id=model_name,
+        temperature=0.0,
+        max_tokens=8192
+    )
+    librarian_agent = get_librarian_agent(model, max_print_outputs_length=max_print_outputs_length)
+    agent = CodeAgent(
+        tools=[text_editor_tool, bash_tool],
+        managed_agents=[librarian_agent],
+        model=model,
+        add_base_tools=False,
+        max_steps=max_steps,
+        planning_interval=planning_interval,
+        verbosity_level=verbosity_level,
+        prompt_templates=get_prompt("system"),
+        max_print_outputs_length=max_print_outputs_length,
+    )
+    response = agent.run(query)
+    return response
+
+
+if __name__ == "__main__":
+    run_main_agent(query=PROMPT4, model_name=MODEL2)

@@ -1,6 +1,8 @@
+import importlib.resources
 from typing import Optional
 
-from smolagents import CodeAgent, ManagedAgent  # type: ignore
+import yaml
+from smolagents import CodeAgent  # type: ignore
 from smolagents.models import Model  # type: ignore
 from smolagents.default_tools import DuckDuckGoSearchTool, VisitWebpageTool  # type: ignore
 
@@ -12,7 +14,7 @@ from holosophos.tools import (
     DocumentQATool,
 )
 
-
+NAME = "librarian"
 DESCRIPTION = """This agent runs gets and analyzes information from papers.
 It has access to ArXiv and web search.
 Give it your task as an argument."""
@@ -21,10 +23,12 @@ Give it your task as an argument."""
 def get_librarian_agent(
     model: Model,
     max_steps: int = 50,
-    planning_interval: Optional[int] = None,
+    planning_interval: Optional[int] = 4,
     max_print_outputs_length: int = 20000,
-) -> ManagedAgent:
-    agent = CodeAgent(
+) -> CodeAgent:
+    return CodeAgent(
+        name=NAME,
+        description=DESCRIPTION,
         tools=[
             arxiv_search_tool,
             arxiv_download_tool,
@@ -37,15 +41,7 @@ def get_librarian_agent(
         add_base_tools=False,
         max_steps=max_steps,
         planning_interval=planning_interval,
-        system_prompt=get_prompt("librarian_system"),
+        prompt_templates=get_prompt("librarian"),
         max_print_outputs_length=max_print_outputs_length,
         additional_authorized_imports=["json"],
     )
-
-    managed_agent = ManagedAgent(
-        agent=agent,
-        name="librarian",
-        description=DESCRIPTION,
-        managed_agent_prompt=get_prompt("librarian_managed"),
-    )
-    return managed_agent

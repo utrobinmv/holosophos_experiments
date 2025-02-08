@@ -1,15 +1,16 @@
 from typing import Any, Optional
 
+import yaml
 from jinja2 import Template
 
 from holosophos.files import PROMPTS_DIR_PATH
 
 
 def get_prompt(template_name: str) -> str:
-    template_path = PROMPTS_DIR_PATH / f"{template_name}.jinja"
+    template_path = PROMPTS_DIR_PATH / f"{template_name}.yaml"
     with open(template_path) as f:
         template = f.read()
-    return template
+    return yaml.safe_load(template)
 
 
 def encode_prompt(template_name: str, **kwargs: Any) -> str:
