@@ -55,7 +55,7 @@ def run_main_agent(
     verbosity_level: int = 2,
     planning_interval: int = 3,
     max_steps: int = 50,
-):
+) -> str:
     model = LiteLLMModel(
         model_id=model_name,
         temperature=0.0,
@@ -73,7 +73,7 @@ def run_main_agent(
         prompt_templates=get_prompt("system"),
         max_print_outputs_length=max_print_outputs_length,
     )
-    response = agent.run(query)
+    response: str = agent.run(query)
     return response
 
 

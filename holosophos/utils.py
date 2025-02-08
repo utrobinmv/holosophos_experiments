@@ -1,22 +1,16 @@
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
 import yaml
-from jinja2 import Template
 
 from holosophos.files import PROMPTS_DIR_PATH
 
 
-def get_prompt(template_name: str) -> str:
+def get_prompt(template_name: str) -> Dict[str, Any]:
     template_path = PROMPTS_DIR_PATH / f"{template_name}.yaml"
     with open(template_path) as f:
         template = f.read()
-    return yaml.safe_load(template)
-
-
-def encode_prompt(template_name: str, **kwargs: Any) -> str:
-    text = get_prompt(template_name)
-    template = Template(text)
-    return template.render(**kwargs).strip() + "\n"
+    templates: Dict[str, Any] = yaml.safe_load(template)
+    return templates
 
 
 def truncate_content(

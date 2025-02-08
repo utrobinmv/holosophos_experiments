@@ -1,7 +1,5 @@
-import importlib.resources
 from typing import Optional
 
-import yaml
 from smolagents import CodeAgent  # type: ignore
 from smolagents.models import Model  # type: ignore
 from smolagents.default_tools import DuckDuckGoSearchTool, VisitWebpageTool  # type: ignore
