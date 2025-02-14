@@ -283,11 +283,12 @@ managed_agent:
       Query:
       {{task}}
       ---
-      You're helping your manager solve a wider task: so make sure to not provide a one-line answer, but give as much information as possible to give them a clear understanding of the answer. Always provide specific paper ArXiv IDs and titles in your answer.
+      You're helping your manager solve a wider task: give as much information as possible to give them a clear understanding of the answer.
+      Always provide specific paper ArXiv IDs and titles in your answer.
 
       Put all these in your final_answer tool. Anything you do not pass as an argument to final_answer will be lost.
-      Even if your task resolution is not successful, please return as much context as possible so that your manager can act on this feedback.
       Do not stop until you find the answer for the query.
+      Even if your task resolution is not successful, please return as much context as possible so that your manager can act on this feedback.
 
   report: |-
       Here is the final answer from your managed agent '{{name}}':

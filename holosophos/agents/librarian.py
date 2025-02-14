@@ -20,9 +20,10 @@ Give it your task as an argument."""
 
 def get_librarian_agent(
     model: Model,
-    max_steps: int = 50,
-    planning_interval: Optional[int] = 4,
+    max_steps: int = 21,
+    planning_interval: Optional[int] = 5,
     max_print_outputs_length: int = 20000,
+    verbosity_level: int = 2,
 ) -> CodeAgent:
     return CodeAgent(
         name=NAME,
@@ -42,4 +43,5 @@ def get_librarian_agent(
         prompt_templates=get_prompt("librarian"),
         max_print_outputs_length=max_print_outputs_length,
         additional_authorized_imports=["json"],
+        verbosity_level=verbosity_level,
     )

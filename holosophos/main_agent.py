@@ -1,3 +1,4 @@
+import fire
 from smolagents import CodeAgent  # type: ignore
 from smolagents.models import LiteLLMModel  # type: ignore
 
@@ -49,19 +50,23 @@ MODEL3 = "openrouter/deepseek/deepseek-chat"
 
 
 def run_main_agent(
-    query: str,
-    model_name: str = "gpt-4o-mini",
+    query: str = PROMPT4,
+    model_name: str = MODEL2,
     max_print_outputs_length: int = 10000,
     verbosity_level: int = 2,
     planning_interval: int = 3,
-    max_steps: int = 50,
+    max_steps: int = 30,
 ) -> str:
     model = LiteLLMModel(
         model_id=model_name,
         temperature=0.0,
         max_tokens=8192
     )
-    librarian_agent = get_librarian_agent(model, max_print_outputs_length=max_print_outputs_length)
+    librarian_agent = get_librarian_agent(
+        model,
+        max_print_outputs_length=max_print_outputs_length,
+        verbosity_level=verbosity_level
+    )
     agent = CodeAgent(
         tools=[text_editor_tool, bash_tool],
         managed_agents=[librarian_agent],
@@ -78,4 +83,4 @@ def run_main_agent(
 
 
 if __name__ == "__main__":
-    run_main_agent(query=PROMPT4, model_name=MODEL2)
+    fire.Fire(run_main_agent)

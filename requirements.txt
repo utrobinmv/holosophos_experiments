@@ -12,3 +12,4 @@ litellm >= 1.57.2
 beautifulsoup4 >= 4.12.0
 types-beautifulsoup4 >= 4.12.0
 markdownify >= 0.14.1
+fire >= 0.7.0
