@@ -11,7 +11,7 @@ system_prompt: |-
   During each intermediate step, you can use `print(...)` or files to save whatever important information you will then need.
   These `print(...)` outputs will then appear in the 'Observation:' field, which will be available as input for the next step.
   However, the length of an observation is limited. If it is longer than a threshold, the content will be cut.
-  Ultimately, you must return a final answer using the `final_answer` tool.
+  Ultimately, you must return a final answer using the `final_answer` tool and first positional argument.
 
 
   ## Examples using tools

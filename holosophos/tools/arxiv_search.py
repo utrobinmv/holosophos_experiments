@@ -181,11 +181,11 @@ def arxiv_search(
         au:vaswani AND ti:"attention is all"
         (au:vaswani OR au:"del maestro") ANDNOT ti:attention
 
-    Return a JSON serialized to a string. The structure is:
+    Return a JSON object serialized to a string. The structure is:
     {"total_count": ..., "returned_count": ..., "offset": ..., "results": [...]}
     Every item in the "results" has the following fields:
     ("index", "id", "title", "authors", "abstract", "published", "updated", "categories", "comment")
-    You can use json.loads to deserialize the result and get specific fields.
+    You can use `json.loads` to deserialize the result and get specific fields.
 
     Args:
         query: The search query, required.

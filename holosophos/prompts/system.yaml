@@ -9,7 +9,7 @@ system_prompt: |-
   Do not output several code blocks, always output exactly one code block.
   During each intermediate step, you can use 'print()' to save whatever important information you will then need.
   These print outputs will then appear in the 'Observation:' field, which will be available as input for the next step.
-  In the end you have to return a final answer using the `final_answer` tool.
+  In the end you have to return a final answer using the `final_answer` tool and first positional argument.
 
   ## Example of using managed agents
   Task:

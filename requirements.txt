@@ -5,7 +5,7 @@ types-xmltodict >= 0.14.0
 pyyaml >= 5.3.1
 types-pyyaml >= 5.3.1
 transformers == 4.47.1
-git+https://github.com/huggingface/smolagents@f9de6742cc3fe3c56284918a4ab5c783880b1774
+smolagents == 1.9.2
 docker >= 7.1.0
 pypdf >= 5.1.0
 litellm >= 1.57.2

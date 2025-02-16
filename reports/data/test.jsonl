@@ -7,3 +7,4 @@
 {"query": "Which paper introduces a method where chunking is applied after the transformer model and before pooling?", "date": "07-02-2025", "target": ["2409.04701"]}
 {"query": "Find the paper about uncertainty estimation for LLMs by researchers from skoltech and airi universities. The authors also introduce open source framework", "date": "07-02-2025", "target": ["2311.07383"]}
 {"query": "Provide a complete list of papers that explore whether multilingual language models use English as an internal reference language.", "date": "07-02-2025", "target": ["2402.10588"]}
+{"query": "Provide a complete list of papers from 2024 about benchmarking role-playing language models by using other language models to simulate users", "date": "09-02-2025", "target": ["2409.06820"]}
