@@ -1,4 +1,4 @@
-import fire
+import fire  # type: ignore
 from smolagents import CodeAgent  # type: ignore
 from smolagents.models import LiteLLMModel  # type: ignore
 
@@ -57,15 +57,11 @@ def run_main_agent(
     planning_interval: int = 3,
     max_steps: int = 30,
 ) -> str:
-    model = LiteLLMModel(
-        model_id=model_name,
-        temperature=0.0,
-        max_tokens=8192
-    )
+    model = LiteLLMModel(model_id=model_name, temperature=0.0, max_tokens=8192)
     librarian_agent = get_librarian_agent(
         model,
         max_print_outputs_length=max_print_outputs_length,
-        verbosity_level=verbosity_level
+        verbosity_level=verbosity_level,
     )
     agent = CodeAgent(
         tools=[text_editor_tool, bash_tool],
