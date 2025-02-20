@@ -73,7 +73,7 @@ def run_main_agent(
         )
         SmolagentsInstrumentor().instrument()
 
-    if "o1" in model_name:
+    if "o1" in model_name or "o3" in model_name:
         litellm.drop_params = True
     model = LiteLLMModel(model_id=model_name, temperature=0.0, max_tokens=8192)
     librarian_agent = get_librarian_agent(
