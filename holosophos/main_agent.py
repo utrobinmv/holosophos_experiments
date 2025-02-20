@@ -1,9 +1,9 @@
 import fire  # type: ignore
 from smolagents import CodeAgent  # type: ignore
 from smolagents.models import LiteLLMModel  # type: ignore
-import litellm  # type: ignore
-from phoenix.otel import register  # type: ignore
-from openinference.instrumentation.smolagents import SmolagentsInstrumentor  # type: ignore
+import litellm
+from phoenix.otel import register
+from openinference.instrumentation.smolagents import SmolagentsInstrumentor
 from dotenv import load_dotenv
 
 from holosophos.tools import text_editor_tool, bash_tool
