@@ -1,6 +1,10 @@
 import fire  # type: ignore
 from smolagents import CodeAgent  # type: ignore
 from smolagents.models import LiteLLMModel  # type: ignore
+import litellm  # type: ignore
+from phoenix.otel import register  # type: ignore
+from openinference.instrumentation.smolagents import SmolagentsInstrumentor  # type: ignore
+from dotenv import load_dotenv
 
 from holosophos.tools import text_editor_tool, bash_tool
 from holosophos.agents import get_librarian_agent
@@ -47,16 +51,30 @@ Compose a comprehensive report and save into "report.md"
 MODEL1 = "gpt-4o-mini"
 MODEL2 = "anthropic/claude-3-5-sonnet-20241022"
 MODEL3 = "openrouter/deepseek/deepseek-chat"
+MODEL4 = "openrouter/google/gemini-2.0-flash-001"
 
 
 def run_main_agent(
     query: str = PROMPT4,
-    model_name: str = MODEL2,
+    model_name: str = MODEL4,
     max_print_outputs_length: int = 10000,
     verbosity_level: int = 2,
     planning_interval: int = 3,
     max_steps: int = 30,
+    enable_phoenix: bool = False,
+    phoenix_project_name: str = "holosophos",
+    phoenix_endpoint: str = "https://app.phoenix.arize.com/v1/traces",
 ) -> str:
+    load_dotenv()
+    if enable_phoenix and phoenix_project_name and phoenix_endpoint:
+        register(
+            project_name=phoenix_project_name,
+            endpoint=phoenix_endpoint,
+        )
+        SmolagentsInstrumentor().instrument()
+
+    if "o1" in model_name:
+        litellm.drop_params = True
     model = LiteLLMModel(model_id=model_name, temperature=0.0, max_tokens=8192)
     librarian_agent = get_librarian_agent(
         model,

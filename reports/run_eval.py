@@ -1,11 +1,10 @@
 import json
-from typing import Any, List
+from typing import Any, List, Optional
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 import fire  # type: ignore
 from tqdm import tqdm
-
 from holosophos.main_agent import run_main_agent
 
 
@@ -22,9 +21,15 @@ def run_eval(
     model_name: str = "gpt-4o-mini",
     max_workers: int = 1,
     verbosity_level: int = 2,
+    nrows: Optional[int] = None,
+    enable_phoenix: bool = False,
+    phoenix_project_name: str = "holosophos",
+    phoenix_endpoint: str = "https://app.phoenix.arize.com/v1/traces",
 ) -> None:
     with open(input_path) as f:
         records = [json.loads(line) for line in f]
+    if nrows:
+        records = records[:nrows]
     tasks = [
         AgentTask(
             query=r["query"], target=r["target"], model_name=model_name, task_id=i
@@ -37,6 +42,9 @@ def run_eval(
             query=task.query,
             model_name=task.model_name,
             verbosity_level=verbosity_level,
+            enable_phoenix=enable_phoenix,
+            phoenix_project_name=phoenix_project_name,
+            phoenix_endpoint=phoenix_endpoint,
         )
         print(f"TARGET: {task.target}\nPREDICTED: {answer}")
         return answer
@@ -57,7 +65,7 @@ def run_eval(
         target = record["target"]
         is_correct = False
         for arxiv_id in target:
-            if arxiv_id in result:
+            if arxiv_id in str(result):
                 is_correct = True
         correct_count += int(is_correct)
         print(
