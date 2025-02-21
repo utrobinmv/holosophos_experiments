@@ -1,6 +1,9 @@
-from typing import Any, Optional, Dict
+from pathlib import Path
+from typing import Any, Optional, Dict, List
 
 import yaml
+import requests
+from pypdf import PdfReader
 
 from holosophos.files import PROMPTS_DIR_PATH
 
@@ -58,3 +61,28 @@ def truncate_content(
     prefix = content[:half_length]
     suffix = content[-half_length:]
     return prefix + disclaimer + suffix
+
+
+def download_pdf(url: str, output_path: Path) -> None:
+    response = requests.get(url)
+    response.raise_for_status()
+    content_type = response.headers.get("content-type")
+    assert content_type
+    assert "application/pdf" in content_type.lower()
+    with open(output_path.resolve(), "wb") as fp:
+        fp.write(response.content)
+
+
+def parse_pdf_file(pdf_path: Path) -> List[str]:
+    # Why not Marker? Because it is too heavy.
+    reader = PdfReader(str(pdf_path.resolve()))
+
+    pages = []
+    for page_number, page in enumerate(reader.pages, start=1):
+        try:
+            text = page.extract_text()
+            prefix = f"## Page {page_number}\n\n"
+            pages.append(prefix + text)
+        except Exception:
+            continue
+    return pages

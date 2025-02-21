@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 import requests
 import bs4
 from markdownify import MarkdownConverter  # type: ignore
-from pypdf import PdfReader
 
+from holosophos.utils import parse_pdf_file, download_pdf
 from holosophos.files import WORKSPACE_DIR_PATH
 
 HTML_URL = "https://arxiv.org/html/{paper_id}"
@@ -255,25 +255,9 @@ def _parse_pdf(paper_id: str) -> Dict[str, Any]:
     url = PDF_URL.format(paper_id=paper_id)
     pdf_path: Path = WORKSPACE_DIR_PATH / (paper_id + ".pdf")
     if not pdf_path.exists():
-        response = requests.get(url)
-        response.raise_for_status()
-        content_type = response.headers.get("content-type")
-        assert content_type
-        assert "application/pdf" in content_type.lower()
-        with open(pdf_path.resolve(), "wb") as fp:
-            fp.write(response.content)
+        download_pdf(url, pdf_path)
 
-    # Why not Marker? Because it is too heavy.
-    reader = PdfReader(str(pdf_path.resolve()))
-
-    pages = []
-    for page_number, page in enumerate(reader.pages, start=1):
-        try:
-            text = page.extract_text()
-            prefix = f"## Page {page_number}\n\n"
-            pages.append(prefix + text)
-        except Exception:
-            continue
+    pages: List[str] = parse_pdf_file(pdf_path)
     return {
         "toc": "\n".join(
             [f"Page {page_number}" for page_number in range(1, len(pages) + 1)]

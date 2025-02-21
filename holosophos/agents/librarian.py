@@ -2,7 +2,7 @@ from typing import Optional
 
 from smolagents import CodeAgent  # type: ignore
 from smolagents.models import Model  # type: ignore
-from smolagents.default_tools import DuckDuckGoSearchTool, VisitWebpageTool  # type: ignore
+from smolagents.default_tools import DuckDuckGoSearchTool  # type: ignore
 
 from holosophos.utils import get_prompt
 from holosophos.tools import (
@@ -10,6 +10,7 @@ from holosophos.tools import (
     arxiv_download_tool,
     text_editor_tool,
     DocumentQATool,
+    CustomVisitWebpageTool,
 )
 
 NAME = "librarian"
@@ -34,7 +35,7 @@ def get_librarian_agent(
             text_editor_tool,
             DocumentQATool(model),
             DuckDuckGoSearchTool(),
-            VisitWebpageTool(),
+            CustomVisitWebpageTool(),
         ],
         model=model,
         add_base_tools=False,

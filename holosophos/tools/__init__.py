@@ -7,6 +7,7 @@ from holosophos.tools.arxiv_download import arxiv_download
 from holosophos.tools.bash import bash
 from holosophos.tools.text_editor import text_editor
 from holosophos.tools.document_qa import DocumentQATool
+from holosophos.tools.visit_webpage import CustomVisitWebpageTool
 
 
 def convert_tool_to_smolagents(function: Callable[..., Any]) -> Tool:
@@ -23,6 +24,7 @@ __all__ = [
     "arxiv_download",
     "convert_tool_to_smolagents",
     "DocumentQATool",
+    "CustomVisitWebpageTool",
     "bash",
     "text_editor",
     "arxiv_search_tool",
