@@ -170,28 +170,27 @@ def arxiv_search(
     Please always specify the fields. Search should always be field-specific.
     You can search for an exact match of an entire phrase by enclosing the phrase in double quotes.
     If you do not need an exact match of a phrase, use single terms with OR/AND.
-    Boolean operators are strict. In most cases, you need OR and not AND.
-    You can scroll all search results with the "offset" parameter.
+    Boolean operators are strict. OR is better in most cases.
     Do not include date constraints in the query: use "start_date" and "end_date" parameters instead.
-    The names of authors should be in Latin script. For example, search "Ilya Gusev" instead of "Илья Гусев".
+    Use Latin script for names. For example, search "Ilya Gusev" instead of "Илья Гусев".
 
     Example queries:
-        abs:"machine learning"
+        all:"machine learning"
         au:"del maestro"
-        au:vaswani AND ti:"attention is all"
+        au:vaswani AND abs:"attention is all"
         all:role OR all:playing OR all:"language model"
         (au:vaswani OR au:"del maestro") ANDNOT ti:attention
 
-    Return a JSON object serialized to a string. The structure is:
+    Returns a JSON object serialized to a string. The structure is:
     {"total_count": ..., "returned_count": ..., "offset": ..., "results": [...]}
     Every item in the "results" has the following fields:
     ("index", "id", "title", "authors", "abstract", "published", "updated", "categories", "comment")
-    You can use `json.loads` to deserialize the result and get specific fields.
+    Use `json.loads` to deserialize the result if you want to get specific fields.
 
     Args:
         query: The search query, required.
-        offset: The offset in search results. If it is 10, the first 10 items will be skipped. 0 by default.
-        limit: The maximum number of items that will be returned. limit=5 by default, limit=10 is the maximum.
+        offset: The offset to scroll search results. 10 items will be skipped if offset=10. 0 by default.
+        limit: The maximum number of items to return. limit=5 by default, limit=10 is the maximum.
         start_date: Start date in %Y-%m-%d format. None by default.
         end_date: End date in %Y-%m-%d format. None by default.
         sort_by: 3 options to sort by: relevance, lastUpdatedDate, submittedDate. relevance by default.

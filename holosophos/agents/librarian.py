@@ -29,10 +29,10 @@ def get_librarian_agent(
         name=NAME,
         description=DESCRIPTION,
         tools=[
+            DuckDuckGoSearchTool(),
             arxiv_search_tool,
             arxiv_download_tool,
             DocumentQATool(model),
-            DuckDuckGoSearchTool(),
             CustomVisitWebpageTool(),
         ],
         model=model,
