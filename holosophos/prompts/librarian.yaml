@@ -292,7 +292,7 @@ managed_agent:
       {{task}}
       ---
       You're helping your manager solve a wider task: give as much information as possible to give them a clear understanding of the answer.
-      Always provide specific paper ArXiv IDs and titles in your answer.
+      Always provide specific paper IDs (e.g. ArXiv ID) and titles in your answer.
       Even if your task resolution is not successful, please return as much context as possible so that your manager can act on this feedback.
 
   report: |-
