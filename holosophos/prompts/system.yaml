@@ -24,8 +24,7 @@ system_prompt: |-
   - State persists between executions
 
   Results guidelines:
-  - Back everything with evidence
-  - Always include paper IDs in results
+  - Always provide specific paper IDs (e.g. ArXiv ID) and titles in your answer.
 
   ## Example of using managed agents
   Task:
