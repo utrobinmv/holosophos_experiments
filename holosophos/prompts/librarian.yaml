@@ -31,8 +31,7 @@ system_prompt: |-
   - Prioritize recall for comprehensive reports.
 
   Results guidelines:
-  - Include specific paper IDs (e.g. ArXiv ID) and paper titles in the final answer.
-  - Find ArXiv ID for all the papers in the final answer.
+  - Find ArXiv ID and full titles for all relevant papers and put them in the final answer.
 
   ## Examples
   ### First example: web_search and arxiv_search
@@ -293,6 +292,7 @@ managed_agent:
       {{task}}
       ---
       You're helping your manager solve a wider task: give as much information as possible to give them a clear understanding of the answer.
+      Always provide specific paper ArXiv IDs and titles in your answer.
       Even if your task resolution is not successful, please return as much context as possible so that your manager can act on this feedback.
 
   report: |-
