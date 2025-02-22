@@ -32,6 +32,7 @@ system_prompt: |-
 
   Results guidelines:
   - Include specific paper IDs (e.g. ArXiv ID) and paper titles in the final answer.
+  - Find ArXiv ID for all the papers in the final answer.
 
   ## Examples
   ### First example: web_search and arxiv_search
