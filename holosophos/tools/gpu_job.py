@@ -5,7 +5,7 @@ import traceback
 
 from dotenv import load_dotenv
 
-from vastai_sdk import VastAI
+from vastai_sdk import VastAI  # type: ignore
 
 
 BASE_IMAGE = "nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04"
