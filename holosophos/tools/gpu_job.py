@@ -51,7 +51,7 @@ def select_instance(vast_sdk: VastAI, gpu_name: str) -> int:
     return int(offers[0]["id"])
 
 
-def gpu_job(code: str, gpu_type: str = DEFAULT_GPU_TYPE, max_runtime: int = 600):
+def gpu_job(code: str, gpu_type: str = DEFAULT_GPU_TYPE, max_runtime: int = 600) -> str:
     load_dotenv()
     instance_id = None
     sdk = VastAI(api_key=os.getenv("VAST_AI_KEY"))
@@ -84,11 +84,12 @@ def gpu_job(code: str, gpu_type: str = DEFAULT_GPU_TYPE, max_runtime: int = 600)
 
         is_ready = wait_for_instance(sdk, instance_id)
         if not is_ready:
-            print(f"Instance {instance_id} is not ready in time, destroying...")
+            error = f"Instance {instance_id} is not ready in time, destroying..."
             sdk.destroy_instance(id=instance_id)
-            return
+            return error
 
         start_time = time.time()
+        logs = ""
         while time.time() - start_time < max_runtime:
             sdk.execute(id=instance_id, COMMAND="ls /root")
             ls_result = sdk.last_output
@@ -104,12 +105,13 @@ def gpu_job(code: str, gpu_type: str = DEFAULT_GPU_TYPE, max_runtime: int = 600)
 
         print("Cleaning up...")
         sdk.destroy_instance(id=instance_id)
+        return logs
     except Exception:
-        print(traceback.format_exc())
+        exception = traceback.format_exc()
         if instance_id is not None:
             print(f"Destroying instance {instance_id}...")
             sdk.destroy_instance(id=instance_id)
-            return
+        return exception
 
 
 if __name__ == "__main__":
