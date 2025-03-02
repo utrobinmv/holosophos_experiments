@@ -51,7 +51,9 @@ def select_instance(vast_sdk: VastAI, gpu_name: str) -> int:
     return int(offers[0]["id"])
 
 
-def gpu_job(code: str, gpu_type: str = DEFAULT_GPU_TYPE, max_runtime: int = 600) -> str:
+def gpu_job(
+    code: str, gpu_type: str = DEFAULT_GPU_TYPE, max_runtime: int = 1200
+) -> str:
     load_dotenv()
     instance_id = None
     sdk = VastAI(api_key=os.getenv("VAST_AI_KEY"))
@@ -60,7 +62,10 @@ def gpu_job(code: str, gpu_type: str = DEFAULT_GPU_TYPE, max_runtime: int = 600)
         offer_id = select_instance(sdk, gpu_type)
 
         code_b64 = base64.b64encode(code.encode()).decode()
+        start_logs_token = "START LOGS:"
         onstart_cmd = (
+            f"wget https://bootstrap.pypa.io/get-pip.py && python3 get-pip.py && "
+            f"pip3 install accelerate torch transformers datasets scikit-learn && "
             f'python3 -c "import base64; '
             f"open('/root/script.py', 'wb').write(base64.b64decode('{code_b64}')); "
             f"print('Running user code...'); "
@@ -68,7 +73,7 @@ def gpu_job(code: str, gpu_type: str = DEFAULT_GPU_TYPE, max_runtime: int = 600)
             f"result = subprocess.run(['python3', '/root/script.py'], capture_output=True, text=True); "
             f"logs = result.stdout + '\\n' + result.stderr; "
             f"open('/root/output.log', 'w').write(logs); "
-            f"print('Execution finished. Logs:', logs)\""
+            f"print('Execution finished. {start_logs_token}', logs)\""
         )
 
         print(f"Launching offer {offer_id}...")
@@ -97,13 +102,18 @@ def gpu_job(code: str, gpu_type: str = DEFAULT_GPU_TYPE, max_runtime: int = 600)
             if ls_result and "output.log" in ls_result:
                 sdk.logs(INSTANCE_ID=instance_id)
                 logs = sdk.last_output
-                print("Execution completed, retrieved logs:")
-                print(logs)
-                break
+                if start_logs_token in logs:
+                    logs = start_logs_token.split(start_logs_token)[-1]
+                    print("Execution completed, retrieved logs:")
+                    print(logs)
+                    break
 
             time.sleep(5)
 
-        print("Cleaning up...")
+        if time.time() - start_time >= max_runtime:
+            print("Execution timeout!")
+
+        print(f"Destroying instance {instance_id}...")
         sdk.destroy_instance(id=instance_id)
         return logs
     except Exception:
