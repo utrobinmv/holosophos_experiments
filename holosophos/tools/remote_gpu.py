@@ -4,13 +4,17 @@ import traceback
 import subprocess
 import atexit
 import signal
+import inspect
+import functools
 from pathlib import Path
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Callable
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
 from vastai_sdk import VastAI  # type: ignore
 
+from holosophos.tools.text_editor import text_editor
+from holosophos.files import WORKSPACE_DIR_PATH
 
 BASE_IMAGE = "nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04"
 DEFAULT_GPU_TYPE = "RTX_3090"
@@ -49,7 +53,7 @@ signal.signal(signal.SIGTERM, cleanup_machine)
 
 
 def wait_for_instance(
-    vast_sdk: VastAI, instance_id: str, max_wait_time: int = 600
+    vast_sdk: VastAI, instance_id: str, max_wait_time: int = 180
 ) -> bool:
     print(f"Waiting for instance {instance_id} to be ready...")
     start_wait = int(time.time())
@@ -111,6 +115,25 @@ def run_command(
     return result
 
 
+def recieve_rsync(
+    info: InstanceInfo, remote_path: str, local_path: str
+) -> subprocess.CompletedProcess[str]:
+    rsync_cmd = [
+        "rsync",
+        "-avz",
+        "-e",
+        f"ssh -i {info.ssh_key_path} -p {info.port} -o StrictHostKeyChecking=no",
+        f"{info.username}@{info.ip}:{remote_path}",
+        local_path,
+    ]
+
+    result = subprocess.run(rsync_cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error syncing directory: {local_path} to {remote_path}")
+        print(f"Error: {result.stderr}")
+    return result
+
+
 def send_rsync(
     info: InstanceInfo, local_path: str, remote_path: str
 ) -> subprocess.CompletedProcess[str]:
@@ -146,14 +169,13 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
             continue
         instance_id = instance["new_contract"]
         print(f"Instance launched successfully. ID: {instance_id}")
-        break
-
-    assert instance_id
+        assert instance_id
+        is_ready = wait_for_instance(vast_sdk, instance_id)
+        if is_ready:
+            break
+        vast_sdk.destroy_instance(id=instance_id)
 
     try:
-        is_ready = wait_for_instance(vast_sdk, instance_id)
-        assert is_ready
-
         print("Attaching SSH key...")
         ssh_key_path = Path("~/.ssh/id_rsa").expanduser()
         if not ssh_key_path.exists():
@@ -211,6 +233,20 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
     return info
 
 
+def init_all() -> None:
+    global _sdk, _instance_info
+
+    load_dotenv()
+
+    if not _sdk:
+        _sdk = VastAI(api_key=os.getenv("VAST_AI_KEY"))
+    assert _sdk
+
+    if not _instance_info:
+        _instance_info = launch_instance(_sdk, DEFAULT_GPU_TYPE)
+    assert _instance_info
+
+
 def remote_bash(command: str) -> str:
     """
     Run commands in a bash shell on a remote machine.
@@ -226,25 +262,40 @@ def remote_bash(command: str) -> str:
         command: The bash command to run.
     """
 
-    global _sdk, _instance_info
-
-    load_dotenv()
-
-    if not _sdk:
-        _sdk = VastAI(api_key=os.getenv("VAST_AI_KEY"))
-
-    if not _instance_info:
-        for _ in range(3):
-            _instance_info = launch_instance(_sdk, DEFAULT_GPU_TYPE)
-            if _instance_info is not None:
-                break
+    init_all()
     assert _instance_info
-
     result = run_command(_instance_info, command)
     if result.stdout:
         return result.stdout
     return result.stderr
 
 
+def create_remote_text_editor(
+    text_editor_func: Callable[..., str],
+) -> Callable[..., str]:
+    @functools.wraps(text_editor_func)
+    def wrapper(*args: Any, **kwargs: Any) -> str:
+        init_all()
+        assert _instance_info
+
+        recieve_rsync(_instance_info, "/root/", str(WORKSPACE_DIR_PATH))
+
+        result: str = text_editor_func(*args, **kwargs)
+
+        send_rsync(_instance_info, str(WORKSPACE_DIR_PATH) + "/", "/root")
+
+        return result
+
+    orig_sig = inspect.signature(text_editor_func)
+    wrapper.__signature__ = orig_sig  # type: ignore
+    if text_editor_func.__doc__:
+        wrapper.__doc__ = text_editor_func.__doc__
+    return wrapper
+
+
+remote_text_editor = create_remote_text_editor(text_editor)
+
+
 if __name__ == "__main__":
-    print(remote_bash("echo 'Hello world!'"))
+    print(remote_bash("echo 'Hello world!' >> 1.txt"))
+    print(remote_text_editor(command="view", path="1.txt"))
