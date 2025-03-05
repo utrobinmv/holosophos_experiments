@@ -7,7 +7,7 @@ from openinference.instrumentation.smolagents import SmolagentsInstrumentor
 from dotenv import load_dotenv
 
 from holosophos.tools import text_editor_tool, bash_tool
-from holosophos.agents import get_librarian_agent
+from holosophos.agents import get_librarian_agent, get_mle_solver_agent
 from holosophos.utils import get_prompt
 
 
@@ -52,11 +52,12 @@ MODEL1 = "gpt-4o-mini"
 MODEL2 = "anthropic/claude-3-5-sonnet-20241022"
 MODEL3 = "openrouter/deepseek/deepseek-chat"
 MODEL4 = "openrouter/google/gemini-2.0-flash-001"
+MODEL5 = "anthropic/claude-3-7-sonnet-20250219"
 
 
 def run_main_agent(
     query: str = PROMPT4,
-    model_name: str = MODEL4,
+    model_name: str = MODEL5,
     max_print_outputs_length: int = 10000,
     verbosity_level: int = 2,
     planning_interval: int = 3,
@@ -81,9 +82,14 @@ def run_main_agent(
         max_print_outputs_length=max_print_outputs_length,
         verbosity_level=verbosity_level,
     )
+    mle_solver_agent = get_mle_solver_agent(
+        model,
+        max_print_outputs_length=max_print_outputs_length,
+        verbosity_level=verbosity_level,
+    )
     agent = CodeAgent(
         tools=[text_editor_tool, bash_tool],
-        managed_agents=[librarian_agent],
+        managed_agents=[librarian_agent, mle_solver_agent],
         model=model,
         add_base_tools=False,
         max_steps=max_steps,

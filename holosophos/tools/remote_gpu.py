@@ -13,22 +13,22 @@ from dataclasses import dataclass
 from dotenv import load_dotenv
 from vastai_sdk import VastAI  # type: ignore
 
-from holosophos.tools.text_editor import text_editor
 from holosophos.files import WORKSPACE_DIR_PATH
 
 BASE_IMAGE = "nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04"
 DEFAULT_GPU_TYPE = "RTX_3090"
+WRITE_COMMANDS = ("append", "write")
 
 
 @dataclass
 class InstanceInfo:
     instance_id: int
-    ip: str
-    port: int
-    username: str
-    ssh_key_path: str
-    gpu_name: str
-    start_time: int
+    ip: str = ""
+    port: int = 0
+    username: str = ""
+    ssh_key_path: str = ""
+    gpu_name: str = ""
+    start_time: int = ""
 
 
 _sdk: Optional[VastAI] = None
@@ -104,6 +104,12 @@ def run_command(
         "StrictHostKeyChecking=no",
         "-o",
         "ConnectTimeout=10",
+        "-o",
+        "ServerAliveInterval=30",
+        "-o",
+        "ServerAliveCountMax=3",
+        "-o",
+        "TCPKeepAlive=yes",
         f"{instance.username}@{instance.ip}",
         command,
     ]
@@ -129,8 +135,8 @@ def recieve_rsync(
 
     result = subprocess.run(rsync_cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"Error syncing directory: {local_path} to {remote_path}")
-        print(f"Error: {result.stderr}")
+        error_output = f"Error syncing directory: {remote_path} to {local_path}. Error: {result.stderr}"
+        raise Exception(error_output)
     return result
 
 
@@ -148,8 +154,8 @@ def send_rsync(
 
     result = subprocess.run(rsync_cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"Error syncing directory: {local_path} to {remote_path}")
-        print(f"Error: {result.stderr}")
+        error_output = f"Error syncing directory: {local_path} to {remote_path}. Error: {result.stderr}"
+        raise Exception(error_output)
     return result
 
 
@@ -160,16 +166,22 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
     instance_id = None
     for offer_id in offer_ids:
         print(f"Launching offer {offer_id}...")
+        onstart_cmd = (
+            "touch ~/.no_auto_tmux && "
+            "apt-get update && "
+            "wget https://bootstrap.pypa.io/get-pip.py && "
+            "python3 get-pip.py && "
+            "python3 -m pip install torch transformers"
+        )
         instance = vast_sdk.create_instance(
-            id=offer_id,
-            image=BASE_IMAGE,
-            disk=50.0,
+            id=offer_id, image=BASE_IMAGE, disk=50.0, onstart_cmd=onstart_cmd
         )
         if not instance["success"]:
             continue
         instance_id = instance["new_contract"]
-        print(f"Instance launched successfully. ID: {instance_id}")
         assert instance_id
+        _instance_info = InstanceInfo(instance_id=instance_id)
+        print(f"Instance launched successfully. ID: {instance_id}")
         is_ready = wait_for_instance(vast_sdk, instance_id)
         if is_ready:
             break
@@ -278,24 +290,25 @@ def create_remote_text_editor(
         init_all()
         assert _instance_info
 
-        recieve_rsync(_instance_info, "/root/", str(WORKSPACE_DIR_PATH))
+        args_dict = {k: v for k, v in kwargs.items()}
+        if args:
+            args_dict.update(dict(zip(("command", "path"), args)))
+        path = args_dict["path"]
+        command = args_dict["command"]
+
+        if command != "write":
+            recieve_rsync(_instance_info, f"/root/{path}", f"{WORKSPACE_DIR_PATH}")
 
         result: str = text_editor_func(*args, **kwargs)
 
-        send_rsync(_instance_info, str(WORKSPACE_DIR_PATH) + "/", "/root")
+        if command != "view":
+            send_rsync(_instance_info, f"{WORKSPACE_DIR_PATH}/{path}", f"/root")
 
         return result
 
     orig_sig = inspect.signature(text_editor_func)
     wrapper.__signature__ = orig_sig  # type: ignore
     if text_editor_func.__doc__:
-        wrapper.__doc__ = text_editor_func.__doc__
+        wrapper.__doc__ = "Executes on a remote machine\n" + text_editor_func.__doc__
+        wrapper.__name__ = "remote_text_editor"
     return wrapper
-
-
-remote_text_editor = create_remote_text_editor(text_editor)
-
-
-if __name__ == "__main__":
-    print(remote_bash("echo 'Hello world!' >> 1.txt"))
-    print(remote_text_editor(command="view", path="1.txt"))

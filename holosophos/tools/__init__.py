@@ -9,17 +9,23 @@ from holosophos.tools.bash import bash
 from holosophos.tools.text_editor import text_editor
 from holosophos.tools.document_qa import DocumentQATool
 from holosophos.tools.visit_webpage import CustomVisitWebpageTool
+from holosophos.tools.remote_gpu import remote_bash, create_remote_text_editor
 
 
 def convert_tool_to_smolagents(function: Callable[..., Any]) -> Tool:
     return tool(function)
 
 
+remote_text_editor = create_remote_text_editor(text_editor)
+
 arxiv_search_tool = convert_tool_to_smolagents(arxiv_search)
 arxiv_download_tool = convert_tool_to_smolagents(arxiv_download)
 anthology_search_tool = convert_tool_to_smolagents(anthology_search)
 bash_tool = convert_tool_to_smolagents(bash)
 text_editor_tool = convert_tool_to_smolagents(text_editor)
+remote_bash_tool = convert_tool_to_smolagents(remote_bash)
+remote_text_editor_tool = convert_tool_to_smolagents(remote_text_editor)
+
 
 __all__ = [
     "arxiv_search",
@@ -35,4 +41,8 @@ __all__ = [
     "anthology_search_tool",
     "bash_tool",
     "text_editor_tool",
+    "remote_bash",
+    "remote_text_editor",
+    "remote_bash_tool",
+    "remote_text_editor_tool",
 ]
