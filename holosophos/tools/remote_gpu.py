@@ -28,7 +28,7 @@ class InstanceInfo:
     username: str = ""
     ssh_key_path: str = ""
     gpu_name: str = ""
-    start_time: int = ""
+    start_time: int = 0
 
 
 _sdk: Optional[VastAI] = None
