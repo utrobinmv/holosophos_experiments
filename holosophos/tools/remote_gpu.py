@@ -115,9 +115,10 @@ def run_command(
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"Error running command: {command}")
-        print(f"Output: {result.stdout}")
-        print(f"Error: {result.stderr}")
+        error_output = f"Error running command: {command}"
+        error_output += f"Output: {result.stdout}"
+        error_output += f"Error: {result.stderr}"
+        raise Exception(error_output)
     return result
 
 
@@ -171,7 +172,7 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
             "apt-get update && "
             "wget https://bootstrap.pypa.io/get-pip.py && "
             "python3 get-pip.py && "
-            "python3 -m pip install torch transformers"
+            "python3 -m pip install torch transformers accelerate evaluate datasets"
         )
         instance = vast_sdk.create_instance(
             id=offer_id, image=BASE_IMAGE, disk=50.0, onstart_cmd=onstart_cmd
@@ -226,8 +227,13 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
         max_attempts = 3
         is_okay = False
         for attempt in range(max_attempts):
-            result = run_command(info, "echo 'SSH connection successful'")
-            if result.returncode == 0 and "SSH connection successful" in result.stdout:
+            try:
+                result = run_command(info, "echo 'SSH connection successful'")
+            except Exception:
+                print(f"Waiting for SSH... (Attempt {attempt+1}/{max_attempts})")
+                time.sleep(30)
+                continue
+            if "SSH connection successful" in result.stdout:
                 print("SSH connection established successfully!")
                 is_okay = True
                 break
@@ -309,6 +315,8 @@ def create_remote_text_editor(
     orig_sig = inspect.signature(text_editor_func)
     wrapper.__signature__ = orig_sig  # type: ignore
     if text_editor_func.__doc__:
-        wrapper.__doc__ = "Executes on a remote machine\n" + text_editor_func.__doc__
+        orig_doc = text_editor_func.__doc__
+        new_doc = orig_doc.replace("text_editor", "remote_text_editor")
+        wrapper.__doc__ = "Executes on a remote machine\n" + new_doc
         wrapper.__name__ = "remote_text_editor"
     return wrapper

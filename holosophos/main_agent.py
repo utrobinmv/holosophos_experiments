@@ -74,9 +74,15 @@ def run_main_agent(
         )
         SmolagentsInstrumentor().instrument()
 
+    # o1 and o3 hack, they do not support custom temperature
     if "o1" in model_name or "o3" in model_name:
         litellm.drop_params = True
-    model = LiteLLMModel(model_id=model_name, temperature=0.0, max_tokens=8192)
+
+    # Tool choice is disabled, we use CodeAct
+    model = LiteLLMModel(
+        model_id=model_name, temperature=0.0, max_tokens=8192, tool_choice="none"
+    )
+
     librarian_agent = get_librarian_agent(
         model,
         max_print_outputs_length=max_print_outputs_length,
