@@ -17,7 +17,7 @@ OPENROUTER_API_KEY=...
 VAST_AI_KEY=...
 ```
 
-Loging in HF:
+Logging to HF:
 ```
 huggingface-cli login
 ```
