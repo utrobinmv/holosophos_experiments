@@ -116,6 +116,7 @@ planning:
     ## Team members
     You can also give tasks to team members the same way you call tools.
     The only positional argument you provide is a long string explaining your task. Use detailed task descriptions.
+    Always provide all necessary context in every call, team members are stateless and do not remember anything from previous iterations.
     Available team members:
     {%- for agent in managed_agents.values() %}
     ### {{ agent.name }}

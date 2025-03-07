@@ -113,7 +113,7 @@ def run_command(
         f"{instance.username}@{instance.ip}",
         command,
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=43200)
     if result.returncode != 0:
         error_output = f"Error running command: {command}"
         error_output += f"Output: {result.stdout}"
@@ -172,7 +172,7 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
             "apt-get update && "
             "wget https://bootstrap.pypa.io/get-pip.py && "
             "python3 get-pip.py && "
-            "python3 -m pip install torch transformers accelerate evaluate datasets"
+            "python3 -m pip install torch transformers accelerate evaluate datasets scikit-learn"
         )
         instance = vast_sdk.create_instance(
             id=offer_id, image=BASE_IMAGE, disk=50.0, onstart_cmd=onstart_cmd
@@ -181,6 +181,7 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
             continue
         instance_id = instance["new_contract"]
         assert instance_id
+        global _instance_info
         _instance_info = InstanceInfo(instance_id=instance_id)
         print(f"Instance launched successfully. ID: {instance_id}")
         is_ready = wait_for_instance(vast_sdk, instance_id)
@@ -308,7 +309,7 @@ def create_remote_text_editor(
         result: str = text_editor_func(*args, **kwargs)
 
         if command != "view":
-            send_rsync(_instance_info, f"{WORKSPACE_DIR_PATH}/{path}", f"/root")
+            send_rsync(_instance_info, f"{WORKSPACE_DIR_PATH}/{path}", "/root")
 
         return result
 

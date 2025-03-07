@@ -9,6 +9,7 @@ from holosophos.tools import (
     CustomVisitWebpageTool,
     remote_text_editor_tool,
     remote_bash_tool,
+    hf_datasets_search_tool,
 )
 
 NAME = "mle_solver"
@@ -19,7 +20,7 @@ Give it your task as an argument."""
 
 def get_mle_solver_agent(
     model: Model,
-    max_steps: int = 21,
+    max_steps: int = 42,
     planning_interval: Optional[int] = 5,
     max_print_outputs_length: int = 20000,
     verbosity_level: int = 2,
@@ -30,6 +31,7 @@ def get_mle_solver_agent(
         tools=[
             remote_bash_tool,
             remote_text_editor_tool,
+            hf_datasets_search_tool,
             DuckDuckGoSearchTool(),
             CustomVisitWebpageTool(),
         ],

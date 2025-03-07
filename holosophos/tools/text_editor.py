@@ -27,7 +27,7 @@ def _write(path: Path, file_text: str, overwrite: bool) -> str:
         lines = path.read_text().splitlines(True)
     _save_file_state(path, lines)
     path.write_text(file_text)
-    return truncate_content(file_text, WRITE_MAX_OUTPUT_LENGTH)
+    return f"Write was successful, the content of the '{path}' has changed!"
 
 
 def _append(path: Path, new_str: str) -> str:
