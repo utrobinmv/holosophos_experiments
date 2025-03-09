@@ -10,6 +10,6 @@ def test_hf_datasets_search_gazeta() -> None:
 
 
 def test_hf_datasets_search_cifar() -> None:
-    response = hf_datasets_search(query="CIFAR-10")
+    response = json.loads(hf_datasets_search(query="CIFAR-10"))
     assert response["results"]
     assert "uoft-cs/cifar10" in str(response)

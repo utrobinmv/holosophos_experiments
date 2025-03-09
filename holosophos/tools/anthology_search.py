@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
-from acl_anthology import Anthology  # type: ignore
+from acl_anthology import Anthology
 
 
 class AnthologySingleton:
