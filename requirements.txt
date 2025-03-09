@@ -18,3 +18,4 @@ types-tqdm >= 4.66.0
 arize-phoenix-otel >= 0.8.0
 vastai-sdk == 0.1.16
 duckduckgo_search == 6.4.2
+acl_anthology >= 0.5.1

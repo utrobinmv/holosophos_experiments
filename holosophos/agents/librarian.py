@@ -8,6 +8,7 @@ from holosophos.utils import get_prompt
 from holosophos.tools import (
     arxiv_search_tool,
     arxiv_download_tool,
+    hf_datasets_search_tool,
     s2_citations_tool,
     DocumentQATool,
     CustomVisitWebpageTool,
@@ -34,6 +35,7 @@ def get_librarian_agent(
             arxiv_search_tool,
             arxiv_download_tool,
             s2_citations_tool,
+            hf_datasets_search_tool,
             DocumentQATool(model),
             CustomVisitWebpageTool(),
         ],

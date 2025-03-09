@@ -14,11 +14,15 @@ def _format_date(dt: Optional[datetime]) -> str:
 
 
 def _clean_entry(entry: DatasetInfo) -> Dict[str, Any]:
-    readme_path = hf_hub_download(
-        repo_id=entry.id, repo_type="dataset", filename="README.md"
-    )
-    with open(readme_path, "r", encoding="utf-8") as f:
-        readme_content = f.read()
+    try:
+        readme_path = hf_hub_download(
+            repo_id=entry.id, repo_type="dataset", filename="README.md"
+        )
+        with open(readme_path, "r", encoding="utf-8") as f:
+            readme_content = f.read()
+    except Exception:
+        readme_content = ""
+
     return {
         "id": entry.id,
         "created_at": _format_date(entry.created_at),
@@ -78,7 +82,3 @@ def hf_datasets_search(
         )
     )
     return _format_entries(results)
-
-
-if __name__ == "__main__":
-    print(hf_datasets_search(query="gazeta"))

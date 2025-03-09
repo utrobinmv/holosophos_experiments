@@ -79,9 +79,7 @@ def run_main_agent(
         litellm.drop_params = True
 
     # Tool choice is disabled, we use CodeAct
-    model = LiteLLMModel(
-        model_id=model_name, temperature=0.0, max_tokens=8192, tool_choice="none"
-    )
+    model = LiteLLMModel(model_id=model_name, temperature=0.0, max_tokens=8192)
 
     librarian_agent = get_librarian_agent(
         model,
