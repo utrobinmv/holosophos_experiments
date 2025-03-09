@@ -136,6 +136,7 @@ def _get_results(url: str) -> requests.Response:
 
     try:
         response = session.get(url, timeout=30)
+        response.raise_for_status()
         return response
     except (
         requests.exceptions.ConnectionError,
