@@ -54,6 +54,7 @@ def run_eval(
         predicted_value = None
         if "{" in result and "}" in result:
             json_result = result[result.find("{") : result.rfind("}") + 1]
+            json_result = json_result.replace("'", '"')
             parsed_result = json.loads(json_result)
             if field in parsed_result:
                 predicted_value = parsed_result[field]

@@ -21,7 +21,7 @@ Give it your task as an argument."""
 def get_mle_solver_agent(
     model: Model,
     max_steps: int = 42,
-    planning_interval: Optional[int] = 5,
+    planning_interval: Optional[int] = 6,
     max_print_outputs_length: int = 20000,
     verbosity_level: int = 2,
 ) -> CodeAgent:

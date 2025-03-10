@@ -15,9 +15,8 @@ from vastai_sdk import VastAI  # type: ignore
 
 from holosophos.files import WORKSPACE_DIR_PATH
 
-BASE_IMAGE = "nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04"
+BASE_IMAGE = "phoenix120/holosophos_mle"
 DEFAULT_GPU_TYPE = "RTX_3090"
-WRITE_COMMANDS = ("append", "write")
 
 
 @dataclass
@@ -167,16 +166,7 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
     instance_id = None
     for offer_id in offer_ids:
         print(f"Launching offer {offer_id}...")
-        onstart_cmd = (
-            "touch ~/.no_auto_tmux && "
-            "apt-get update && "
-            "wget https://bootstrap.pypa.io/get-pip.py && "
-            "python3 get-pip.py && "
-            "python3 -m pip install torch transformers accelerate evaluate datasets scikit-learn"
-        )
-        instance = vast_sdk.create_instance(
-            id=offer_id, image=BASE_IMAGE, disk=50.0, onstart_cmd=onstart_cmd
-        )
+        instance = vast_sdk.create_instance(id=offer_id, image=BASE_IMAGE, disk=50.0)
         if not instance["success"]:
             continue
         instance_id = instance["new_contract"]

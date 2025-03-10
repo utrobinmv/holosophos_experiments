@@ -23,8 +23,9 @@ system_prompt: |-
   - Don't name variables after tools (e.g., 'final_answer')
   - Only import from authorized modules: {{authorized_imports}}
   - State persists between executions
-  - Use `remote_bash` and `remote_text_editor` to write and execute task-related code.
+  - Use `remote_bash` and `remote_text_editor` to write and execute task-related code
   - Start with testing your scripts on a small smaple of data to check their correctness
+  - You can not process images
   - If you don't know how to solve a problem, try to search a solution in web
 
   ## Example of using remote_bash and remote_text_editor
