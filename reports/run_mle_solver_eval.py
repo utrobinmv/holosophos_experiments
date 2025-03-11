@@ -52,12 +52,17 @@ def run_eval(
         target = record["target"]
         is_correct = False
         predicted_value = None
-        if "{" in result and "}" in result:
+        if isinstance(result, str) and "{" in result and "}" in result:
             json_result = result[result.find("{") : result.rfind("}") + 1]
             json_result = json_result.replace("'", '"')
             parsed_result = json.loads(json_result)
             if field in parsed_result:
                 predicted_value = parsed_result[field]
+                if predicted_value >= target:
+                    is_correct = True
+        elif isinstance(result, dict):
+            if field in result:
+                predicted_value = result[field]
                 if predicted_value >= target:
                     is_correct = True
         correct_count += int(is_correct)
