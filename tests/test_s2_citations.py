@@ -5,7 +5,6 @@ from holosophos.tools import s2_citations
 
 def test_s2_citations_pingpong() -> None:
     citations = json.loads(s2_citations("2409.06820"))
-    print(citations)
     assert citations["total_count"] >= 1
     assert "2502.18308" in str(citations["results"])
 
