@@ -3,7 +3,7 @@ import atexit
 import signal
 from typing import Optional, Any
 
-from holosophos.files import WORKSPACE_DIR_PATH
+from holosophos.files import WORKSPACE_DIR_HOST_PATH
 
 
 _container = None
@@ -65,7 +65,7 @@ def bash(command: str) -> str:
                 tty=True,
                 stdin_open=True,
                 volumes={
-                    WORKSPACE_DIR_PATH: {
+                    WORKSPACE_DIR_HOST_PATH: {
                         "bind": DOCKER_WORKSPACE_DIR_PATH,
                         "mode": "rw",
                     }
