@@ -12,6 +12,7 @@ system_prompt: |-
   Do not stop until the task is solved.
   Your own knowledge might be incorrect. Instead rely on tool results.
   You do not have GPUs for heavy computations. Instead rely on your team members.
+  Always rely on your team members to do any tasks related to search and coding.
 
   ## Rules
   Format: Always use:

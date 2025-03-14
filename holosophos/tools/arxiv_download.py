@@ -268,9 +268,15 @@ def _parse_pdf(paper_id: str) -> Dict[str, Any]:
     }
 
 
-def arxiv_download(paper_id: str, include_citations: Optional[bool] = False) -> str:
+def arxiv_download(
+    paper_id: str,
+    include_citations: Optional[bool] = False,
+    mode: Optional[str] = "html",
+) -> str:
     """
     Downloads a paper from Arxiv and converts it to text.
+    Use mode = "html" by default.
+    Fall back to mode = "pdf" if there are any problems with the HTML version.
 
     Returns a JSON with a following structure:
     {
@@ -285,13 +291,18 @@ def arxiv_download(paper_id: str, include_citations: Optional[bool] = False) -> 
     Args:
         paper_id: ID of the paper on Arxiv. For instance: 2409.06820v1
         include_citations: include "citations" in the result or not. False by default.
+        mode: Which version of paper to use. Options: ["html", "pdf"]. "html" by default.
     """
 
     abs_meta = _parse_abs(paper_id)
-    try:
-        content = _parse_html(paper_id)
-    except requests.exceptions.HTTPError:
+    if mode == "html":
+        try:
+            content = _parse_html(paper_id)
+        except requests.exceptions.HTTPError:
+            content = _parse_pdf(paper_id)
+    else:
         content = _parse_pdf(paper_id)
+
     if not include_citations and "citations" in content:
         content.pop("citations")
 

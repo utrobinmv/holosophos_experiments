@@ -15,9 +15,10 @@ from holosophos.tools import (
 )
 
 NAME = "librarian"
-DESCRIPTION = """This agent runs gets and analyzes information from papers.
-It has access to ArXiv and web search.
-Give it your task as an argument."""
+DESCRIPTION = """This team member runs gets and analyzes information from papers.
+He has access to ArXiv, Semantic Scholar, ACL Anthology, and web search.
+Ask him any questions about papers and web articles.
+Give him your task as an argument."""
 
 
 def get_librarian_agent(

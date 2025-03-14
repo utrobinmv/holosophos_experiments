@@ -215,7 +215,7 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
 
         print(info)
         print(f"Checking SSH connection to {info.ip}:{info.port}...")
-        max_attempts = 3
+        max_attempts = 5
         is_okay = False
         for attempt in range(max_attempts):
             try:
@@ -242,6 +242,12 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
     return info
 
 
+def send_scripts() -> None:
+    for name in os.listdir(WORKSPACE_DIR_PATH):
+        if name.endswith(".py"):
+            send_rsync(_instance_info, f"{WORKSPACE_DIR_PATH}/{name}", "/root")
+
+
 def init_all() -> None:
     global _sdk, _instance_info
 
@@ -253,7 +259,11 @@ def init_all() -> None:
 
     if not _instance_info:
         _instance_info = launch_instance(_sdk, DEFAULT_GPU_TYPE)
-    assert _instance_info
+
+    if _instance_info:
+        send_scripts()
+
+    assert _instance_info, "Failed to connect to a remote instance! Try again"
 
 
 def remote_bash(command: str) -> str:
