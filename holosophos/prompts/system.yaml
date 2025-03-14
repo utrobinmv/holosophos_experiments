@@ -11,6 +11,7 @@ system_prompt: |-
   Return the solution using `final_answer(result)`
   Do not stop until the task is solved.
   Your own knowledge might be incorrect. Instead rely on tool results.
+  You do not have GPUs for heavy computations. Instead rely on your peers.
 
   ## Rules
   Format: Always use:
