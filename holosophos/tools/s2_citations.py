@@ -4,6 +4,8 @@
 import json
 from typing import Optional, List, Dict, Any
 from urllib3.util.retry import Retry
+import time
+import random
 
 import requests
 
@@ -11,10 +13,15 @@ OLD_API_URL_TEMPLATE = "https://api.semanticscholar.org/v1/paper/{paper_id}"
 GRAPH_URL_TEMPLATE = "https://api.semanticscholar.org/graph/v1/paper/{paper_id}/citations?fields={fields}&offset={offset}&limit={limit}"
 FIELDS = "title,authors,externalIds,venue,citationCount,publicationDate"
 
+WORKING_PROXIES_FILE = "working_proxies.json"
+with open(WORKING_PROXIES_FILE, "r") as f:
+        PROXIES_LIST = json.load(f)
 
-def _get_results(url: str) -> requests.Response:
+a = 1
+
+def _get_results(url: str, proxies: Optional[Dict[str, str]] = None) -> requests.Response:
     retry_strategy = Retry(
-        total=3,
+        total=1,
         backoff_factor=30,
         status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["GET"],
@@ -25,15 +32,18 @@ def _get_results(url: str) -> requests.Response:
     session.mount("https://", adapter)
 
     try:
-        response = session.get(url, timeout=30)
+        time.sleep(random.uniform(1, 3))
+        response = session.get(url, timeout=30, proxies=proxies)
         response.raise_for_status()
         return response
     except (
         requests.exceptions.ConnectionError,
         requests.exceptions.RequestException,
         requests.exceptions.HTTPError,
+        requests.exceptions.ProxyError,
     ) as e:
         print(f"Failed after {retry_strategy.total} retries: {str(e)}")
+        print(f"Proxy failed: {proxies}. Error: {str(e)}")
         raise
 
     return response
@@ -106,15 +116,25 @@ def s2_citations(
     url = GRAPH_URL_TEMPLATE.format(
         paper_id=paper_id, fields=FIELDS, offset=offset, limit=limit
     )
-    response = _get_results(url)
-    result = response.json()
-    entries = result["data"]
-    total_count = len(result["data"]) + result["offset"]
 
-    if "next" in result:
-        paper_url = OLD_API_URL_TEMPLATE.format(paper_id=paper_id)
-        paper_response = _get_results(paper_url)
-        paper_result = paper_response.json()
-        total_count = paper_result["numCitedBy"]
+    # Попробуем каждый прокси из списка
+    for proxy in PROXIES_LIST:
+        try:    
+            response = _get_results(url, proxies=proxy)
+            result = response.json()
+            entries = result["data"]
+            total_count = len(result["data"]) + result["offset"]
 
-    return _format_entries(entries, offset if offset else 0, total_count)
+            if "next" in result:
+                paper_url = OLD_API_URL_TEMPLATE.format(paper_id=paper_id)
+                paper_response = _get_results(paper_url, proxies=proxy)
+                paper_result = paper_response.json()
+                total_count = paper_result["numCitedBy"]
+
+            return _format_entries(entries, offset if offset else 0, total_count)
+
+        except Exception as e:
+            print(f"Proxy failed: {proxy}. Error: {str(e)}")
+            continue
+
+    raise Exception("All proxies failed. Please check your proxy list or try again later.")
