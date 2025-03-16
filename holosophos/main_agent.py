@@ -1,3 +1,5 @@
+from typing import Dict, Any
+
 import fire  # type: ignore
 from smolagents import CodeAgent  # type: ignore
 from smolagents.models import LiteLLMModel  # type: ignore
@@ -73,7 +75,7 @@ def run_main_agent(
         )
         SmolagentsInstrumentor().instrument()
 
-    model_params = {
+    model_params: Dict[str, Any] = {
         "temperature": 0.0,
         "max_tokens": 8192,
     }

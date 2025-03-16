@@ -241,6 +241,7 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
 
 
 def send_scripts() -> None:
+    assert _instance_info
     for name in os.listdir(WORKSPACE_DIR_PATH):
         if name.endswith(".py"):
             send_rsync(_instance_info, f"{WORKSPACE_DIR_PATH}/{name}", "/root")

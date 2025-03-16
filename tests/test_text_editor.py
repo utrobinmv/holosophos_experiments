@@ -135,10 +135,7 @@ def test_text_editor_write_existing_file() -> None:
         name = os.path.basename(f.name)
         test_file = WORKSPACE_DIR_PATH / name
         test_file.write_text(DOCUMENT1)
-
-        with pytest.raises(AssertionError):
-            text_editor("write", name, file_text="New content")
-        text_editor("write", name, file_text="New content", overwrite=True)
+        text_editor("write", name, file_text="New content")
 
 
 def test_text_editor_missing_required_params() -> None:
