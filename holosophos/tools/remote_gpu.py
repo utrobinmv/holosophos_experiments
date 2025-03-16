@@ -1,6 +1,5 @@
 import os
 import time
-import traceback
 import subprocess
 import atexit
 import signal
@@ -175,11 +174,11 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
         _instance_info = InstanceInfo(instance_id=instance_id)
         print(f"Instance launched successfully. ID: {instance_id}")
         is_ready = wait_for_instance(vast_sdk, instance_id)
-        if is_ready:
-            break
-        vast_sdk.destroy_instance(id=instance_id)
+        if not is_ready:
+            print(f"Destroying instance {instance_id}...")
+            vast_sdk.destroy_instance(id=instance_id)
+            continue
 
-    try:
         print("Attaching SSH key...")
         ssh_key_path = Path("~/.ssh/id_rsa").expanduser()
         if not ssh_key_path.exists():
@@ -231,13 +230,12 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
             print(f"Waiting for SSH... (Attempt {attempt+1}/{max_attempts})")
             time.sleep(30)
 
-        assert is_okay
+        if not is_okay:
+            print(f"Destroying instance {instance_id}...")
+            vast_sdk.destroy_instance(id=instance_id)
+            continue
 
-    except Exception:
-        print(traceback.format_exc())
-        print(f"Destroying instance {instance_id}...")
-        vast_sdk.destroy_instance(id=instance_id)
-        return None
+        break
 
     return info
 
@@ -268,7 +266,7 @@ def init_all() -> None:
 
 def remote_bash(command: str) -> str:
     """
-    Run commands in a bash shell on a remote machine.
+    Run commands in a bash shell on a remote machine with GPU cards.
     When invoking this tool, the contents of the "command" parameter does NOT need to be XML-escaped.
     You don't have access to the internet via this tool.
     You do have access to a mirror of common linux and python packages via apt and pip.
@@ -319,6 +317,6 @@ def create_remote_text_editor(
     if text_editor_func.__doc__:
         orig_doc = text_editor_func.__doc__
         new_doc = orig_doc.replace("text_editor", "remote_text_editor")
-        wrapper.__doc__ = "Executes on a remote machine\n" + new_doc
+        wrapper.__doc__ = "Executes on a remote machine with GPU.\n" + new_doc
         wrapper.__name__ = "remote_text_editor"
     return wrapper

@@ -132,7 +132,6 @@ def text_editor(
     insert_line: Optional[int] = None,
     view_start_line: Optional[int] = None,
     view_end_line: Optional[int] = None,
-    overwrite: Optional[bool] = False,
     show_lines: Optional[bool] = False,
 ) -> str:
     """
@@ -145,6 +144,7 @@ def text_editor(
     If a `command` generates a long output, it will be truncated and marked with `<response clipped>`.
     The `undo_edit` command will revert the last edit made to the file at `path`.
     Always write arguments with keys, do not rely on positions.
+    Be careful with escaping strings and line breaks in Python code.
 
     Notes for using the `text_editor` command:
     - The `old_str` parameter should match EXACTLY one or more consecutive lines from the original file.
@@ -168,7 +168,6 @@ def text_editor(
         view_start_line: Optional for view command, use to view specific lines
         view_end_line: Optional for view command, use to view specific lines
         file_text: Required for `write` command, with the content of the file to be writed.
-        overwrite: Optional for `write` command. If True, the command is allowed to overwrite existing files.
         insert_line: Required for `insert` command. `new_str` will be inserted AFTER the line `insert_line` of `path`.
         new_str: Required for `str_replace`, `insert` and `append`.
         old_str: Required for `str_replace` containing the string in `path` to replace.
@@ -186,9 +185,7 @@ def text_editor(
         return _view(path_obj, view_start_line, view_end_line, show_lines)
     if command == "write":
         assert file_text is not None, "'file_text' is required for 'write' command"
-        return _write(
-            path_obj, file_text, overwrite if overwrite is not None else False
-        )
+        return _write(path_obj, file_text, overwrite=True)
     if command == "append":
         assert new_str is not None, "'new_str' is required for 'append' command"
         return _append(path_obj, new_str)
