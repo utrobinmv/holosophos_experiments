@@ -16,6 +16,7 @@ from holosophos.files import WORKSPACE_DIR_PATH
 
 BASE_IMAGE = "phoenix120/holosophos_mle"
 DEFAULT_GPU_TYPE = "RTX_3090"
+GLOBAL_TIMEOUT = 43200
 
 
 @dataclass
@@ -34,7 +35,9 @@ _instance_info: Optional[InstanceInfo] = None
 
 
 def cleanup_machine(signum: Optional[Any] = None, frame: Optional[Any] = None) -> None:
+    print("Cleaning up...")
     global _instance_info
+    signal.alarm(0)
     if _instance_info and _sdk:
         try:
             _sdk.destroy_instance(id=_instance_info.instance_id)
@@ -48,6 +51,7 @@ def cleanup_machine(signum: Optional[Any] = None, frame: Optional[Any] = None) -
 atexit.register(cleanup_machine)
 signal.signal(signal.SIGINT, cleanup_machine)
 signal.signal(signal.SIGTERM, cleanup_machine)
+signal.signal(signal.SIGALRM, cleanup_machine)
 
 
 def wait_for_instance(
@@ -256,6 +260,7 @@ def init_all() -> None:
         _sdk = VastAI(api_key=os.getenv("VAST_AI_KEY"))
     assert _sdk
 
+    signal.alarm(GLOBAL_TIMEOUT)
     if not _instance_info:
         _instance_info = launch_instance(_sdk, DEFAULT_GPU_TYPE)
 
