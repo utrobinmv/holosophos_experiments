@@ -55,7 +55,7 @@ signal.signal(signal.SIGALRM, cleanup_machine)
 
 
 def wait_for_instance(
-    vast_sdk: VastAI, instance_id: str, max_wait_time: int = 180
+    vast_sdk: VastAI, instance_id: str, max_wait_time: int = 300
 ) -> bool:
     print(f"Waiting for instance {instance_id} to be ready...")
     start_wait = int(time.time())
@@ -94,7 +94,7 @@ def get_offers(vast_sdk: VastAI, gpu_name: str) -> List[int]:
 
 
 def run_command(
-    instance: InstanceInfo, command: str
+    instance: InstanceInfo, command: str, timeout: int = 60
 ) -> subprocess.CompletedProcess[str]:
     cmd = [
         "ssh",
@@ -115,12 +115,19 @@ def run_command(
         f"{instance.username}@{instance.ip}",
         command,
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=43200)
-    if result.returncode != 0:
-        error_output = f"Error running command: {command}"
-        error_output += f"Output: {result.stdout}"
-        error_output += f"Error: {result.stderr}"
-        raise Exception(error_output)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        if result.returncode != 0:
+            raise Exception(
+                f"Error running command: {command}; "
+                f"Output: {result.stdout}; "
+                f"Error: {result.stderr}"
+            )
+    except subprocess.TimeoutExpired:
+        raise Exception(
+            f"Command timed out after {timeout} seconds: {command}; "
+            f"Host: {instance.username}@{instance.ip}:{instance.port}"
+        )
     return result
 
 
@@ -218,13 +225,13 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
 
         print(info)
         print(f"Checking SSH connection to {info.ip}:{info.port}...")
-        max_attempts = 5
+        max_attempts = 10
         is_okay = False
         for attempt in range(max_attempts):
             try:
                 result = run_command(info, "echo 'SSH connection successful'")
-            except Exception:
-                print(f"Waiting for SSH... (Attempt {attempt+1}/{max_attempts})")
+            except Exception as e:
+                print(f"Waiting for SSH... {e}\n(Attempt {attempt+1}/{max_attempts})")
                 time.sleep(30)
                 continue
             if "SSH connection successful" in result.stdout:
@@ -270,7 +277,7 @@ def init_all() -> None:
     assert _instance_info, "Failed to connect to a remote instance! Try again"
 
 
-def remote_bash(command: str) -> str:
+def remote_bash(command: str, timeout: Optional[int] = 60) -> str:
     """
     Run commands in a bash shell on a remote machine with GPU cards.
     When invoking this tool, the contents of the "command" parameter does NOT need to be XML-escaped.
@@ -284,11 +291,13 @@ def remote_bash(command: str) -> str:
 
     Args:
         command: The bash command to run.
+        timeout: Timeout for the command execution. 60 seconds by default. Set a higher value for heavy jobs.
     """
 
     init_all()
     assert _instance_info
-    result = run_command(_instance_info, command)
+    assert timeout
+    result = run_command(_instance_info, command, timeout=timeout)
     if result.stdout:
         return result.stdout
     return result.stderr
