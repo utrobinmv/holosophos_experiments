@@ -82,7 +82,6 @@ def run_main_agent(
     if "o1" in model_name or "o3" in model_name:
         model_params = {"reasoning_effort": "high"}
 
-    # Tool choice is disabled, we use CodeAct
     model = LiteLLMModel(model_id=model_name, **model_params)
 
     librarian_agent = get_librarian_agent(
