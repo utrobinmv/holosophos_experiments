@@ -1,7 +1,8 @@
+from typing import Dict, Any
+
 import fire  # type: ignore
 from smolagents import CodeAgent  # type: ignore
 from smolagents.models import LiteLLMModel  # type: ignore
-import litellm
 from phoenix.otel import register
 from openinference.instrumentation.smolagents import SmolagentsInstrumentor
 from dotenv import load_dotenv
@@ -74,12 +75,14 @@ def run_main_agent(
         )
         SmolagentsInstrumentor().instrument()
 
-    # o1 and o3 hack, they do not support custom temperature
+    model_params: Dict[str, Any] = {
+        "temperature": 0.0,
+        "max_tokens": 8192,
+    }
     if "o1" in model_name or "o3" in model_name:
-        litellm.drop_params = True
+        model_params = {"reasoning_effort": "high"}
 
-    # Tool choice is disabled, we use CodeAct
-    model = LiteLLMModel(model_id=model_name, temperature=0.0, max_tokens=8192)
+    model = LiteLLMModel(model_id=model_name, **model_params)
 
     librarian_agent = get_librarian_agent(
         model,

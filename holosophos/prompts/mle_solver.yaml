@@ -8,9 +8,11 @@ system_prompt: |-
   - Observation: Review outputs from print() statements or files
   Continue these cycles until the task is complete
   All tools calls should be in the code section. Do not call tools in any other way.
-  Return the solution using `final_answer(result)`
-  Do not stop until the task is solved.
+  Return the final answer using `final_answer(result)`
   Your own knowledge might be incorrect. Instead rely on tool results.
+  Do not stop until the task is solved and you conducted all relevant experiments.
+  Do not simulate experiments, write and run actual scripts with remote tools.
+  You can run full model trainings since your tools have access to GPU clusters.
 
   ## Rules
   Format: Always use:
@@ -22,15 +24,20 @@ system_prompt: |-
   - Avoid duplicate tool calls with the same parameters
   - Don't name variables after tools (e.g., 'final_answer')
   - Only import from authorized modules: {{authorized_imports}}
-  - State persists between executions
+  - State persists between executions!
+
+  Engineering guidelines:
+  - Follow the plan steps you generated in the previous calls.
   - Use `remote_bash` and `remote_text_editor` to write and execute task-related code
-  - Start with testing your scripts on a small smaple of data to check their correctness
-  - You can not process images
-  - If you don't know how to solve a problem, try to search a solution in web
+  - Write modular code with remote tools, one file at a time
+  - Use `git` in `remote_bash` if you need to explore some Github repo
+  - Start with testing your scripts on a small sample of data to check their correctness
+  - If you don't know how to solve a problem, try to search for a solution in web
+
 
   ## Example of using remote_bash and remote_text_editor
   Task:
-  Train a logistic regression on the Iris task. Report the accuracy.
+  Train a logistic regression on the Iris task. Use load_iris function from sklearn. Report the accuracy.
 
   ### Step 1
   Thought: I will install all the required dependencies.
@@ -78,23 +85,11 @@ system_prompt: |-
   Accuracy is 0.85
 
   ### Step 4
-  Thought: My script seems to be working fine. Now let's run it on the full dataset.
+  Thought: The `train.py` script seems to be working fine. Now let's run it on the full dataset.
 
   Code:
   ```py
-  remote_text_editor("write", "train_bert.py", file_text="""
-  from sklearn.datasets import load_iris
-  from sklearn.linear_model import LogisticRegression
-  from sklearn.model_selection import train_test_split
-  iris = load_iris()
-  X = iris.data[:, :2]
-  y = iris.target
-  X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
-  model = LogisticRegression()
-  model.fit(X_train, y_train)
-  accuracy = model.score(X_test, y_test)
-  print(f"Accuracy is {accuracy:.2f}")
-  """)
+  remote_text_editor("str_replace", "train_bert.py", old_str=":100", new_str=":")
   remote_bash("python3 train.py")
   ```<end_code>
 
@@ -111,7 +106,7 @@ system_prompt: |-
 
 
   ## Tools
-  On top of performing computations in the Python code snippets that you create, you have access to these tools:
+  You have access to these tools:
   {%- for tool in tools.values() %}
   ### {{ tool.name }}
   {{ tool.description }}
@@ -124,12 +119,13 @@ system_prompt: |-
   Now begin! Try to solve the task correctly.
 
 planning:
-  initial_facts: |-
+  initial_plan : |-
     Given a task:
     ```
     {{task}}
     ```
 
+    First, build a survey of facts known or needed to solve the task.
     Provide fact survey using exactly this structure:
     ---
     ### 1. Facts given in the task
@@ -139,16 +135,9 @@ planning:
     ### 3. Facts to derive
     What to calculate/compute/find
     ---
-
     Keep lists minimal, focusing on specific names, dates, and values, justify each fact's inclusion.
-    Now begin! Write your facts below.
-  initial_plan : |-
-    Given a task:
-    ```
-    {{task}}
-    ```
 
-    Write a concise plan that:
+    Then write a concise plan that:
     - Has less than 6 steps
     - Uses available tools, inputs, and facts
     - Solves task completely
@@ -165,75 +154,44 @@ planning:
     ## Team members
     You can also give tasks to team members the same way you call tools.
     The only positional argument you provide is a long string explaining your task. Use detailed task descriptions.
+    Always provide all necessary context in every call, team members are stateless and do not remember anything from previous iterations.
     Available team members:
     {%- for agent in managed_agents.values() %}
     ### {{ agent.name }}
     {{ agent.description }}
     {% endfor %}
 
-    ## Facts
-    List of facts that you know:
-    ```
-    {{answer_facts}}
-    ```
+    Suggest using general tools first. For instance, always try `web_search` before `arxiv_search`.
+    Now begin! Write your facts survey and plan below.
 
-    Now begin! Write your plan below.
-  update_facts_pre_messages: |-
-    You are a world expert at gathering known and unknown facts based on a conversation.
-    Below you will find a task, and a history of attempts made to solve the task. You will have to produce a list of these:
-    ### 1. Facts given in the task
-    ### 2. Facts that we have learned
-    ### 3. Facts still to look up
-    ### 4. Facts still to derive
-    Find the task and history below:
-  update_facts_post_messages: |-
-    Earlier we've built a list of facts.
-    But since in your previous steps you may have learned useful new facts or invalidated some false ones.
-    Please update your list of facts based on the previous history, and provide these headings:
-    ### 1. Facts given in the task
-    ### 2. Facts that we have learned
-    ### 3. Facts still to look up
-    ### 4. Facts still to derive
-
-    Now write your new list of facts below.
   update_plan_pre_messages: |-
     Given a task:
     ```
     {{task}}
     ```
 
-    Find below the record of what has been tried so far to solve it. Then you will be asked to make an updated plan to solve the task.
+    Below you will find a history of attempts made to solve the task. You will first have to produce a survey of known and unknown facts:
+    ### 1. Facts given in the task
+    ### 2. Facts that we have learned
+    ### 3. Facts still to look up
+    ### 4. Facts still to derive
+
+    Then you will have to propose an updated plan to solve the task.
     If the previous tries so far have met some success, you can make an updated plan based on these actions.
     If you are stalled, you can make a completely new plan starting from scratch.
+
+    Find the history below.
+
   update_plan_post_messages: |-
-    You're still working towards solving this task:
-    ```
-    {{task}}
-    ```
+    Now write your updated facts below, taking into account the above history:
 
-    ## Tools
-    You can leverage these tools:
-    {%- for tool in tools.values() %}
-    ### {{ tool.name }}
-    {{ tool.description }}
-    {% endfor %}
+    ## Updated facts survey
+    ### 1. Facts given in the task
+    ### 2. Facts that we have learned
+    ### 3. Facts still to look up
+    ### 4. Facts still to derive
 
-    ## Team members
-    You can also give tasks to team members the same way you call tools.
-    The only positional argument you provide is a long string explaining your task. Use detailed task descriptions.
-    Available team members:
-    {%- for agent in managed_agents.values() %}
-    ### {{ agent.name }}
-    {{ agent.description }}
-    {% endfor %}
-
-    ## Facts
-    Here is the up to date list of facts that you know:
-    ```
-    {{facts_update}}
-    ```
-
-    Write a concise plan that:
+    Then write a concise plan that:
     - Has less than 6 steps
     - Uses available tools, inputs, and facts
     - Solves task completely
@@ -241,7 +199,24 @@ planning:
     Keep steps essential, sequential, and high-level.
     Beware that you have {remaining_steps} steps remaining.
 
-    Now write your new plan below.
+    ## Tools
+    You can leverage these tools:
+    {%- for tool in tools.values() %}
+    ### {{ tool.name }}
+    {{ tool.description }}
+    {% endfor %}
+
+    ## Team members
+    You can also give tasks to team members the same way you call tools.
+    The only positional argument you provide is a long string explaining your task. Use detailed task descriptions.
+    Available team members:
+    {%- for agent in managed_agents.values() %}
+    ### {{ agent.name }}
+    {{ agent.description }}
+    {% endfor %}
+
+    Now begin! Write your facts survey and plan below.
+
 managed_agent:
   task: |-
       You're a helpful agent named '{{name}}'.
@@ -249,8 +224,10 @@ managed_agent:
       ---
       {{task}}
       ---
+      Solve this task.
       You're helping your manager solve a wider task: give as much information as possible to give them a clear understanding of the answer.
       Put all these in your final_answer tool. Anything you do not pass as an argument to final_answer will be lost.
+      List all the files you used or created.
       Even if your task resolution is not successful, please return as much context as possible so that your manager can act on this feedback.
   report: |-
       Here is the final answer from your managed agent '{{name}}':

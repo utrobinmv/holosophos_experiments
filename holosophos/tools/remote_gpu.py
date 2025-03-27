@@ -1,6 +1,5 @@
 import os
 import time
-import traceback
 import subprocess
 import atexit
 import signal
@@ -17,6 +16,7 @@ from holosophos.files import WORKSPACE_DIR_PATH
 
 BASE_IMAGE = "phoenix120/holosophos_mle"
 DEFAULT_GPU_TYPE = "RTX_3090"
+GLOBAL_TIMEOUT = 43200
 
 
 @dataclass
@@ -35,7 +35,9 @@ _instance_info: Optional[InstanceInfo] = None
 
 
 def cleanup_machine(signum: Optional[Any] = None, frame: Optional[Any] = None) -> None:
+    print("Cleaning up...")
     global _instance_info
+    signal.alarm(0)
     if _instance_info and _sdk:
         try:
             _sdk.destroy_instance(id=_instance_info.instance_id)
@@ -49,10 +51,11 @@ def cleanup_machine(signum: Optional[Any] = None, frame: Optional[Any] = None) -
 atexit.register(cleanup_machine)
 signal.signal(signal.SIGINT, cleanup_machine)
 signal.signal(signal.SIGTERM, cleanup_machine)
+signal.signal(signal.SIGALRM, cleanup_machine)
 
 
 def wait_for_instance(
-    vast_sdk: VastAI, instance_id: str, max_wait_time: int = 180
+    vast_sdk: VastAI, instance_id: str, max_wait_time: int = 300
 ) -> bool:
     print(f"Waiting for instance {instance_id} to be ready...")
     start_wait = int(time.time())
@@ -91,7 +94,7 @@ def get_offers(vast_sdk: VastAI, gpu_name: str) -> List[int]:
 
 
 def run_command(
-    instance: InstanceInfo, command: str
+    instance: InstanceInfo, command: str, timeout: int = 60
 ) -> subprocess.CompletedProcess[str]:
     cmd = [
         "ssh",
@@ -112,12 +115,19 @@ def run_command(
         f"{instance.username}@{instance.ip}",
         command,
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=43200)
-    if result.returncode != 0:
-        error_output = f"Error running command: {command}"
-        error_output += f"Output: {result.stdout}"
-        error_output += f"Error: {result.stderr}"
-        raise Exception(error_output)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        if result.returncode != 0:
+            raise Exception(
+                f"Error running command: {command}; "
+                f"Output: {result.stdout}; "
+                f"Error: {result.stderr}"
+            )
+    except subprocess.TimeoutExpired:
+        raise Exception(
+            f"Command timed out after {timeout} seconds: {command}; "
+            f"Host: {instance.username}@{instance.ip}:{instance.port}"
+        )
     return result
 
 
@@ -175,11 +185,11 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
         _instance_info = InstanceInfo(instance_id=instance_id)
         print(f"Instance launched successfully. ID: {instance_id}")
         is_ready = wait_for_instance(vast_sdk, instance_id)
-        if is_ready:
-            break
-        vast_sdk.destroy_instance(id=instance_id)
+        if not is_ready:
+            print(f"Destroying instance {instance_id}...")
+            vast_sdk.destroy_instance(id=instance_id)
+            continue
 
-    try:
         print("Attaching SSH key...")
         ssh_key_path = Path("~/.ssh/id_rsa").expanduser()
         if not ssh_key_path.exists():
@@ -215,13 +225,13 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
 
         print(info)
         print(f"Checking SSH connection to {info.ip}:{info.port}...")
-        max_attempts = 3
+        max_attempts = 10
         is_okay = False
         for attempt in range(max_attempts):
             try:
                 result = run_command(info, "echo 'SSH connection successful'")
-            except Exception:
-                print(f"Waiting for SSH... (Attempt {attempt+1}/{max_attempts})")
+            except Exception as e:
+                print(f"Waiting for SSH... {e}\n(Attempt {attempt+1}/{max_attempts})")
                 time.sleep(30)
                 continue
             if "SSH connection successful" in result.stdout:
@@ -231,15 +241,21 @@ def launch_instance(vast_sdk: VastAI, gpu_name: str) -> Optional[InstanceInfo]:
             print(f"Waiting for SSH... (Attempt {attempt+1}/{max_attempts})")
             time.sleep(30)
 
-        assert is_okay
+        if not is_okay:
+            print(f"Destroying instance {instance_id}...")
+            vast_sdk.destroy_instance(id=instance_id)
+            continue
 
-    except Exception:
-        print(traceback.format_exc())
-        print(f"Destroying instance {instance_id}...")
-        vast_sdk.destroy_instance(id=instance_id)
-        return None
+        break
 
     return info
+
+
+def send_scripts() -> None:
+    assert _instance_info
+    for name in os.listdir(WORKSPACE_DIR_PATH):
+        if name.endswith(".py"):
+            send_rsync(_instance_info, f"{WORKSPACE_DIR_PATH}/{name}", "/root")
 
 
 def init_all() -> None:
@@ -251,14 +267,19 @@ def init_all() -> None:
         _sdk = VastAI(api_key=os.getenv("VAST_AI_KEY"))
     assert _sdk
 
+    signal.alarm(GLOBAL_TIMEOUT)
     if not _instance_info:
         _instance_info = launch_instance(_sdk, DEFAULT_GPU_TYPE)
-    assert _instance_info
+
+    if _instance_info:
+        send_scripts()
+
+    assert _instance_info, "Failed to connect to a remote instance! Try again"
 
 
-def remote_bash(command: str) -> str:
+def remote_bash(command: str, timeout: Optional[int] = 60) -> str:
     """
-    Run commands in a bash shell on a remote machine.
+    Run commands in a bash shell on a remote machine with GPU cards.
     When invoking this tool, the contents of the "command" parameter does NOT need to be XML-escaped.
     You don't have access to the internet via this tool.
     You do have access to a mirror of common linux and python packages via apt and pip.
@@ -270,11 +291,13 @@ def remote_bash(command: str) -> str:
 
     Args:
         command: The bash command to run.
+        timeout: Timeout for the command execution. 60 seconds by default. Set a higher value for heavy jobs.
     """
 
     init_all()
     assert _instance_info
-    result = run_command(_instance_info, command)
+    assert timeout
+    result = run_command(_instance_info, command, timeout=timeout)
     if result.stdout:
         return result.stdout
     return result.stderr
@@ -309,6 +332,6 @@ def create_remote_text_editor(
     if text_editor_func.__doc__:
         orig_doc = text_editor_func.__doc__
         new_doc = orig_doc.replace("text_editor", "remote_text_editor")
-        wrapper.__doc__ = "Executes on a remote machine\n" + new_doc
+        wrapper.__doc__ = "Executes on a remote machine with GPU.\n" + new_doc
         wrapper.__name__ = "remote_text_editor"
     return wrapper

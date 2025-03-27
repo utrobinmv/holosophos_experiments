@@ -13,9 +13,10 @@ from holosophos.tools import (
 )
 
 NAME = "mle_solver"
-DESCRIPTION = """This agent runs computational experiments using remote GPUs.
-It has access to tools that execute code on a remote GPU.
-Give it your task as an argument."""
+DESCRIPTION = """This team member is an egineer that writes code and runs computational experiments using remote GPUs.
+He has access to tools that write and execute code on a remote GPU.
+Ask him when you need to solve any programming tasks that require GPU.
+Give him your task as an argument."""
 
 
 def get_mle_solver_agent(
